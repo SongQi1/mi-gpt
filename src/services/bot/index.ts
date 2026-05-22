@@ -74,6 +74,7 @@ const userTemplate = `
 export type MyBotConfig = DeepPartial<IBotConfig> & {
   speaker: AISpeaker;
   systemTemplate?: string;
+  botConfigPath?: string;
 };
 
 export class MyBot {
@@ -83,7 +84,9 @@ export class MyBot {
   constructor(config: MyBotConfig) {
     this.speaker = config.speaker;
     this.systemTemplate = config.systemTemplate;
-    this.manager = new ConversationManager(config);
+    this.manager = new ConversationManager(config, {
+      indexPath: config.botConfigPath,
+    });
     // 更新 bot 人设命令
     // 比如：你是蔡徐坤，你喜欢唱跳rap。
     this.speaker.addCommand({

@@ -127,6 +127,9 @@ export class BaseSpeaker {
   }
 
   async initMiServices() {
+    if (this.MiNA && this.MiIOT) {
+      return;
+    }
     this.MiNA = await getMiNA(this.config);
     this.MiIOT = await getMiIOT(this.config);
     this.logger.assert(!!this.MiNA && !!this.MiIOT, "初始化 Mi Services 失败");

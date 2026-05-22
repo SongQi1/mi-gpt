@@ -2,7 +2,7 @@ import { Memory, Prisma, User } from "@prisma/client";
 import { DeepPartial, MakeOptional } from "../../utils/type";
 import { MessageCRUD } from "../db/message";
 import { QueryMessage } from "../speaker/speaker";
-import { BotConfig, IBotConfig } from "./config";
+import { BotConfigStore, IBotConfig } from "./config";
 import { MemoryManager } from "./memory";
 
 export interface MessageContext extends IBotConfig {
@@ -15,8 +15,10 @@ export interface MessageWithSender
 
 export class ConversationManager {
   private config: DeepPartial<IBotConfig>;
-  constructor(config: DeepPartial<IBotConfig>) {
+  private botConfig: BotConfigStore;
+  constructor(config: DeepPartial<IBotConfig>, options?: { indexPath?: string }) {
     this.config = config;
+    this.botConfig = new BotConfigStore(options?.indexPath);
   }
 
   async init() {
@@ -36,7 +38,7 @@ export class ConversationManager {
   }
 
   async update(config?: DeepPartial<IBotConfig>) {
-    return BotConfig.update(config ?? this.config);
+    return this.botConfig.update(config ?? this.config);
   }
 
   async getMessages(options?: {

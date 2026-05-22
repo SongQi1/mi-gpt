@@ -35,11 +35,11 @@ export interface IBotConfig {
   room: Room;
 }
 
-class _BotConfig {
+export class BotConfigStore {
   private _logger = Logger.create({ tag: "BotConfig" });
   private botIndex?: IBotIndex;
 
-  private _indexPath = ".bot.json";
+  constructor(private _indexPath = ".bot.json") {}
 
   private async _getIndex(): Promise<IBotIndex | undefined> {
     if (!this.botIndex) {
@@ -127,4 +127,4 @@ class _BotConfig {
   }
 }
 
-export const BotConfig = new _BotConfig();
+export const BotConfig = new BotConfigStore();

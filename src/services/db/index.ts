@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { Logger } from "../../utils/log";
-import { deleteFile, exists } from "../../utils/io";
+import { deleteBotIndexFiles, exists } from "../../utils/io";
 import { Shell } from "../../utils/shell";
 
 export const k404 = -404;
@@ -43,7 +43,7 @@ export function getDBInfo() {
 export async function initDB(debug = false) {
   const { rootDir, dbPath } = getDBInfo();
   if (!exists(dbPath)) {
-    await deleteFile(".bot.json");
+    await deleteBotIndexFiles();
     await Shell.run(`npm run postinstall`, {
       cwd: rootDir,
       silent: !debug,

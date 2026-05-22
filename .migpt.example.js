@@ -166,4 +166,37 @@ export default {
     // 网络请求超时时长（单位毫秒，默认 5 秒）
     timeout: 5000,
   },
+
+  // 可选：一个小米账号下同时接入多个小爱音箱。
+  // 多音箱模式下，建议顶层 speaker 只配置 userId/password 和通用参数，不要配置 did。
+  // did 请单独写在 speakers[] 每一项中，并确保每台设备名称不同，否则只会匹配到第一个同名设备。
+  // 每个音箱会使用独立的 .bot.<id>.json、对话历史和长期/短期记忆。
+  speakers: [
+    {
+      id: "living-room",
+      did: "小爱音箱Pro",
+      bot: {
+        name: "客厅管家",
+        profile: "负责家庭事务提醒，回答简洁稳重。"
+      },
+      name: "客厅的小爱音箱",
+      room: {
+        name: "客厅对话",
+        description: "客厅小爱音箱的独立上下文",
+      },
+    },
+    {
+      id: "yiyibedroom",
+      did: "小爱音箱",
+      bot: {
+        name: "故事姐姐",
+        profile: "温柔耐心，适合给孩子讲故事和解释知识。",
+      },
+      name: "一一房间的小爱音箱",
+      room: {
+        name: "一一房间对话",
+        description: "一一房间小爱音箱的独立上下文",
+      },
+    },
+  ],
 };

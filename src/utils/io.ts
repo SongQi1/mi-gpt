@@ -92,6 +92,15 @@ export const deleteFile = (filePath: string) => {
   }
 };
 
+export async function deleteBotIndexFiles() {
+  const files = await getFiles(".");
+  for (const file of files) {
+    if (file === ".bot.json" || /^\.bot\..+\.json$/.test(file)) {
+      deleteFile(file);
+    }
+  }
+}
+
 export const copyFile = (
   from: string,
   to: string,
