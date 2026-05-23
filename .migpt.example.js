@@ -118,36 +118,12 @@ export default {
     // AI 回答异常时的提示语
     onAIError: ["啊哦，出错了，请稍后再试吧！"], // 为空时可关闭提示语
 
-    /**
-     * 🧩 MIoT 设备指令
-     *
-     * 常见型号的配置参数 👉 https://github.com/idootop/mi-gpt/issues/92
-     */
-
-    // TTS 指令，请到 https://home.miot-spec.com 查询具体指令
-    ttsCommand: [5, 1],
-    // 设备唤醒指令，请到 https://home.miot-spec.com 查询具体指令
-    wakeUpCommand: [5, 3],
     // 查询是否在播放中指令，请到 https://home.miot-spec.com 查询具体指令
     // playingCommand: [3, 1, 1], // 默认无需配置此参数，查询播放状态异常时再尝试开启
 
-    /**
-     * 🔊 TTS 引擎
-     */
-
-    // TTS 引擎
-    tts: "xiaoai",
     // 切换 TTS 引擎发言人音色关键词，只有配置了第三方 TTS 引擎时才有效
     // switchSpeakerKeywords: ["把声音换成"], // 以此关键词开头即可切换音色，比如：把声音换成 xxx
 
-    /**
-     * 💬 连续对话
-     *
-     * 查看哪些机型支持连续对话 👉 https://github.com/idootop/mi-gpt/issues/92
-     */
-
-    // 是否启用连续对话功能，部分小爱音箱型号无法查询到正确的播放状态，需要关闭连续对话
-    streamResponse: false,
     // 连续对话时，无响应多久后自动退出
     exitKeepAliveAfter: 30, // 默认 30 秒，建议不要超过 1 分钟
     // 连续对话时，下发 TTS 指令多长时间后开始检测设备播放状态（默认 3 秒）
@@ -170,11 +146,20 @@ export default {
   // 可选：一个小米账号下同时接入多个小爱音箱。
   // 多音箱模式下，建议顶层 speaker 只配置 userId/password 和通用参数，不要配置 did。
   // did 请单独写在 speakers[] 每一项中，并确保每台设备名称不同，否则只会匹配到第一个同名设备。
+  // 如果某台音箱没有被接管，请开启 enableTrace 查看 MiNA 设备列表，并使用 deviceID 或 miotDID 作为 did。
   // 每个音箱会使用独立的 .bot.<id>.json、对话历史和长期/短期记忆。
   speakers: [
     {
       id: "living-room",
       did: "小爱音箱Pro",
+      // TTS 指令，请到 https://home.miot-spec.com 查询具体指令
+      ttsCommand: [5, 1],
+      // 设备唤醒指令
+      wakeUpCommand: [5, 3],
+      // TTS 引擎：xiaoai | custom
+      tts: "xiaoai",
+      // 是否启用连续对话功能
+      streamResponse: false,
       bot: {
         name: "客厅管家",
         profile: "负责家庭事务提醒，回答简洁稳重。"
@@ -188,6 +173,10 @@ export default {
     {
       id: "yiyibedroom",
       did: "小爱音箱",
+      ttsCommand: [5, 1],
+      wakeUpCommand: [5, 3],
+      tts: "xiaoai",
+      streamResponse: true,
       bot: {
         name: "故事姐姐",
         profile: "温柔耐心，适合给孩子讲故事和解释知识。",

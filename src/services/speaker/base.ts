@@ -7,6 +7,7 @@ import {
 } from "mi-service-lite";
 import { clamp, sleep } from "../../utils/base";
 import { jsonEncode } from "../../utils/parse";
+import { readJSON, writeJSON } from "../../utils/io";
 import { Logger } from "../../utils/log";
 import { StreamResponse } from "./stream";
 import { kAreYouOK } from "../../utils/string";
@@ -124,15 +125,21 @@ export class BaseSpeaker {
     this.ttsCommand = ttsCommand;
     this.wakeUpCommand = wakeUpCommand;
     this.playingCommand = playingCommand;
+    this.logger = Logger.create({ tag: `Speaker[${config.did || "unknown"}]` });
   }
 
   async initMiServices() {
     if (this.MiNA && this.MiIOT) {
       return;
     }
+    await this.clearCachedDevice();
     this.MiNA = await getMiNA(this.config);
     this.MiIOT = await getMiIOT(this.config);
     this.logger.assert(!!this.MiNA && !!this.MiIOT, "初始化 Mi Services 失败");
+    this.assertCurrentDevice();
+    this.logger.log(
+      `已绑定设备：${this.config.did} / MiNA=${this.MiNA!.account.device.name} / MiIOT=${this.MiIOT!.account.device.name}`
+    );
     if (this.debug) {
       const d: any = this.MiIOT!.account?.device;
       this.logger.debug(
@@ -156,6 +163,38 @@ export class BaseSpeaker {
         )
       );
     }
+  }
+
+  private async clearCachedDevice() {
+    const store = await readJSON(".mi.json");
+    if (!store) {
+      return;
+    }
+    for (const service of ["mina", "miiot"]) {
+      if (store[service]) {
+        delete store[service].device;
+      }
+    }
+    await writeJSON(".mi.json", store);
+  }
+
+  assertCurrentDevice() {
+    const did = this.config.did;
+    if (!did) {
+      return;
+    }
+    const mina = this.MiNA!.account.device;
+    const miiot = this.MiIOT!.account.device;
+    const minaMatched = [mina.deviceID, mina.miotDID, mina.name, mina.alias].includes(did);
+    const miiotMatched = [miiot.did, miiot.name].includes(did);
+    this.logger.assert(
+      minaMatched,
+      `MiNA 设备匹配异常：配置 did=${did}，实际绑定=${mina.name}/${mina.deviceID}/${mina.miotDID}`
+    );
+    this.logger.assert(
+      miiotMatched,
+      `MiIOT 设备匹配异常：配置 did=${did}，实际绑定=${miiot.name}/${miiot.did}`
+    );
   }
 
   wakeUp() {

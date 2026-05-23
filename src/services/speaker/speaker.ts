@@ -199,9 +199,12 @@ export class Speaker extends BaseSpeaker {
   private async _fetchFirstMessage() {
     const msgs = await this.getMessages({
       limit: 1,
-      filterAnswer: false,
     });
-    this.currentQueryMsg = msgs[0];
+    if (msgs.length > 0) {
+      this.currentQueryMsg = msgs[0];
+    } else {
+      this.currentQueryMsg = { text: "", timestamp: 0 };
+    }
   }
 
   private async _fetchNextMessage(): Promise<QueryMessage | undefined> {
@@ -225,7 +228,6 @@ export class Speaker extends BaseSpeaker {
       msgs.length < 1 ||
       firstOf(msgs)!.timestamp <= this.currentQueryMsg!.timestamp
     ) {
-      // 没有拉到新消息
       return;
     }
     if (
@@ -292,11 +294,10 @@ export class Speaker extends BaseSpeaker {
     this._lastConversation = conversation;
     let records = conversation?.records ?? [];
     if (filterAnswer) {
-      // 过滤有小爱回答的消息
       records = records.filter(
         (e) =>
-          ["TTS", "LLM"].includes(e.answers[0]?.type) && // 过滤 TTS 和 LLM 消息
-          e.answers.length === 1 // 播放音乐时会有 TTS、Audio 两个 Answer
+          ["TTS", "LLM"].includes(e.answers[0]?.type) &&
+          e.answers.length === 1
       );
     }
     return records.map((e) => {
