@@ -197,11 +197,14 @@ export class Speaker extends BaseSpeaker {
   }
 
   private async _fetchFirstMessage() {
-    const msgs = await this.getMessages({
-      limit: 1,
-    });
-    if (msgs.length > 0) {
-      this.currentQueryMsg = msgs[0];
+    // 直接拿原始最新记录作为游标，不经过 filter，避免最新记录因 answer 类型不匹配被过滤掉
+    const conversation = await this.MiNA!.getConversations({ limit: 1 });
+    const records = conversation?.records ?? [];
+    if (records.length > 0) {
+      this.currentQueryMsg = {
+        text: records[0].query,
+        timestamp: records[0].time,
+      };
     } else {
       this.currentQueryMsg = { text: "", timestamp: 0 };
     }
@@ -297,7 +300,7 @@ export class Speaker extends BaseSpeaker {
       records = records.filter(
         (e) =>
           ["TTS", "LLM"].includes(e.answers[0]?.type) &&
-          e.answers.length === 1
+          e.answers.length >= 1
       );
     }
     return records.map((e) => {
