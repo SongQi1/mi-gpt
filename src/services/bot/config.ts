@@ -5,6 +5,7 @@ import { DeepPartial } from "../../utils/type";
 import { RoomCRUD, getRoomID } from "../db/room";
 import { UserCRUD } from "../db/user";
 import { Logger } from "../../utils/log";
+import { getBotIndex as getDBBotIndex, setBotIndex as setDBBotIndex } from "../config/db-config";
 
 const kDefaultMaster = {
   name: "陆小千",
@@ -39,13 +40,26 @@ export class BotConfigStore {
   private _logger = Logger.create({ tag: "BotConfig" });
   private botIndex?: IBotIndex;
 
-  constructor(private _indexPath = ".bot.json") {}
+  constructor(private _indexPath = ".bot.json", private _useDB = false) {}
 
   private async _getIndex(): Promise<IBotIndex | undefined> {
     if (!this.botIndex) {
-      this.botIndex = await readJSON(this._indexPath);
+      if (this._useDB) {
+        this.botIndex = (await getDBBotIndex(this._indexPath)) ?? undefined;
+      } else {
+        this.botIndex = await readJSON(this._indexPath);
+      }
     }
     return this.botIndex;
+  }
+
+  private async _saveIndex(index: IBotIndex): Promise<void> {
+    this.botIndex = index;
+    if (this._useDB) {
+      await setDBBotIndex(this._indexPath, index);
+    } else {
+      await writeJSON(this._indexPath, index);
+    }
   }
 
   async get(): Promise<IBotConfig | undefined> {
@@ -72,18 +86,19 @@ export class BotConfigStore {
         this._logger.error("create room failed");
         return undefined;
       }
-      this.botIndex = {
+      const newIndex = {
         botId: bot.id,
         masterId: master.id,
       };
-      await writeJSON(this._indexPath, this.botIndex);
+      await this._saveIndex(newIndex);
     }
-    const bot = await UserCRUD.get(this.botIndex!.botId);
+    const currentIndex = this.botIndex!;
+    const bot = await UserCRUD.get(currentIndex.botId);
     if (!bot) {
-      this._logger.error("find bot failed. 请删除 .bot.json 文件后重试！");
+      this._logger.error("find bot failed");
       return undefined;
     }
-    const master = await UserCRUD.get(this.botIndex!.masterId);
+    const master = await UserCRUD.get(currentIndex.masterId);
     if (!master) {
       this._logger.error("find master failed");
       return undefined;
@@ -127,4 +142,4 @@ export class BotConfigStore {
   }
 }
 
-export const BotConfig = new BotConfigStore();
+

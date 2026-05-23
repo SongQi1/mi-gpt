@@ -99,3 +99,47 @@ model LongTermMemory {
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
 }
+
+model WebUser {
+  id             String          @id @default(uuid())
+  username       String          @unique
+  passwordHash   String
+  xiaomiAccounts XiaomiAccount[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model XiaomiAccount {
+  id              String     @id @default(uuid())
+  userId          String
+  password        String     @default("")
+  passToken       String     @default("")
+  speakerDefaults String     @default("{}")
+  webUser         WebUser    @relation(fields: [webUserId], references: [id])
+  webUserId       String
+  speakers        Speaker[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Speaker {
+  id          String         @id
+  account     XiaomiAccount  @relation(fields: [accountId], references: [id])
+  accountId   String
+  did         String         @default("")
+  name        String         @default("")
+  model       String         @default("")
+  modelName   String         @default("")
+  config      String         @default("{}")
+  botIndex    String         @default("{}")
+  seq         Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model AuthToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  webUserId String
+  createdAt DateTime @default(now())
+}

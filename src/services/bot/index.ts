@@ -86,6 +86,7 @@ export class MyBot {
     this.systemTemplate = config.systemTemplate;
     this.manager = new ConversationManager(config, {
       indexPath: config.botConfigPath,
+      useDB: true,
     });
     // 更新 bot 人设命令
     // 比如：你是蔡徐坤，你喜欢唱跳rap。
@@ -100,7 +101,6 @@ export class MyBot {
           bot: { name, profile },
         });
         if (config) {
-          this.speaker.name = config?.bot.name;
           await this.speaker.response({
             text: `你好，我是${name}，很高兴认识你！`,
             keepAlive: this.speaker.keepAlive,
@@ -124,7 +124,6 @@ export class MyBot {
           bot: { name, profile },
         });
         if (config) {
-          this.speaker.name = config?.bot.name;
           await this.speaker.response({
             text: `好的主人，我记住了！`,
             keepAlive: this.speaker.keepAlive,
@@ -145,10 +144,6 @@ export class MyBot {
 
   async run() {
     this.speaker.askAI = (msg) => this.ask(msg);
-    const { bot } = await this.manager.init();
-    if (bot) {
-      this.speaker.name = bot.name;
-    }
     return this.speaker.run();
   }
 
@@ -164,7 +159,7 @@ export class MyBot {
     const longTermMemories = await memory.getLongTermMemories({ take: 1 });
     const longTermMemory = longTermMemories[0]?.text ?? "长期记忆为空";
     const systemPrompt = buildPrompt(
-      this.systemTemplate ?? kDefaultSystemTemplate,
+      this.systemTemplate || kDefaultSystemTemplate,
       {
         shortTermMemory,
         longTermMemory,

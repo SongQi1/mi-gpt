@@ -3,7 +3,7 @@ import { MiGPT } from "../src";
 import config from "../.migpt.js";
 
 async function main() {
-  const client = MiGPT.create(config);
+  const client = new MiGPT("legacy", config);
   await client.start();
 }
 

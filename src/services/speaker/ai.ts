@@ -28,12 +28,6 @@ export type AISpeakerConfig = SpeakerConfig & {
    */
   onAIError?: string[];
   /**
-   * 设备名称，用来唤醒/退出对话模式等
-   *
-   * 建议使用常见词语，避免使用多音字和容易混淆读音的词语
-   */
-  name?: string;
-  /**
    * 召唤关键词
    *
    * 当消息以召唤关键词开头时，会调用 AI 来响应用户消息
@@ -92,7 +86,6 @@ type AnswerStep = (
 
 export class AISpeaker extends Speaker {
   askAI: AISpeakerConfig["askAI"];
-  name: string;
   switchSpeakerKeywords: string[];
   onEnterAI: string[];
   onExitAI: string[];
@@ -109,7 +102,6 @@ export class AISpeaker extends Speaker {
     super(config);
     const {
       askAI,
-      name = "傻妞",
       switchSpeakerKeywords,
       callAIKeywords = ["请", "你", "傻妞"],
       wakeUpKeywords = ["打开", "进入", "召唤"],
@@ -123,7 +115,6 @@ export class AISpeaker extends Speaker {
       audioError = process.env.AUDIO_ERROR,
     } = config;
     this.askAI = askAI;
-    this.name = name;
     this.callAIKeywords = callAIKeywords;
     this.wakeUpKeywords = wakeUpKeywords;
     this.exitKeywords = exitKeywords;

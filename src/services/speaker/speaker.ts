@@ -125,8 +125,8 @@ export class Speaker extends BaseSpeaker {
     const { noNewMsg } = this.checkIfHasNewMsg(msg);
     for (const command of this.commands) {
       if (command.match(msg)) {
-        // 关闭小爱的回复
-        await this.MiNA!.pause();
+        // 关闭小爱的回复并重置音箱状态，确保后续 TTS 正常播放
+        await this.unWakeUp();
         // 执行命令
         const answer = await command.run(msg);
         // 回复用户

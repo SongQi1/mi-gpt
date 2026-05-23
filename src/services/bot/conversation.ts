@@ -16,9 +16,9 @@ export interface MessageWithSender
 export class ConversationManager {
   private config: DeepPartial<IBotConfig>;
   private botConfig: BotConfigStore;
-  constructor(config: DeepPartial<IBotConfig>, options?: { indexPath?: string }) {
+  constructor(config: DeepPartial<IBotConfig>, options?: { indexPath?: string; useDB?: boolean }) {
     this.config = config;
-    this.botConfig = new BotConfigStore(options?.indexPath);
+    this.botConfig = new BotConfigStore(options?.indexPath, options?.useDB);
   }
 
   async init() {

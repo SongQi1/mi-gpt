@@ -29,8 +29,7 @@ export function getSkipWithCursor(skip: number, cursorId: any) {
 
 export function getDBInfo() {
   let rootDir = import.meta.url
-    .replace("/dist/index.js", "")
-    .replace("/dist/index.cjs", "")
+    .replace(/\/dist\/.+$/, "")
     .replace("/src/services/db/index.ts", "")
     .replace("file:///", "");
   if (rootDir[1] !== ":") {

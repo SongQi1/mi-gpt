@@ -1,3 +1,4 @@
+import { copyFileSync, existsSync } from "fs";
 import {
   MiIOT,
   MiNA,
@@ -25,6 +26,10 @@ type ActionCommand = [number, number];
 type PropertyCommand = [number, number, number];
 
 export type BaseSpeakerConfig = MiServiceConfig & {
+  /**
+   * 小米账号 ID，用于多账号 .mi.json 隔离
+   */
+  xiaomiAccountId?: string;
   /**
    * 启用调试（仅调试 MiGPT 相关日志）
    */
@@ -125,7 +130,33 @@ export class BaseSpeaker {
     this.ttsCommand = ttsCommand;
     this.wakeUpCommand = wakeUpCommand;
     this.playingCommand = playingCommand;
+    this._xiaomiAccountId = config.xiaomiAccountId;
     this.logger = Logger.create({ tag: `Speaker[${config.did || "unknown"}]` });
+  }
+
+  private _xiaomiAccountId?: string;
+  private _miFilePath(accountId?: string) {
+    if (!accountId) return ".mi.json";
+    return `.mi-${accountId}.json`;
+  }
+
+  async loadAccountFile() {
+    if (!this._xiaomiAccountId) return;
+    const accountMiPath = this._miFilePath(this._xiaomiAccountId);
+    if (existsSync(accountMiPath)) {
+      copyFileSync(accountMiPath, ".mi.json");
+    }
+  }
+
+  async saveAccountFile() {
+    if (!this._xiaomiAccountId) return;
+    const store = await readJSON(".mi.json");
+    if (store) {
+      for (const service of ["mina", "miiot"]) {
+        if (store[service]) delete store[service].device;
+      }
+      await writeJSON(this._miFilePath(this._xiaomiAccountId), store);
+    }
   }
 
   async initMiServices() {
@@ -344,7 +375,7 @@ export class BaseSpeaker {
       playSFX = true,
       keepAlive = false,
       tts = this.tts,
-      speaker = this._currentSpeaker,
+      speaker = this._currentSpeaker || this.config.did,
     } = options ?? {};
 
     const hasNewMsg = () => options.hasNewMsg?.();

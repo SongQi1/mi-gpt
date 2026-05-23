@@ -7,7 +7,7 @@ export default defineConfig(() => ({
   platform: "node",
   format: ["esm", "cjs"],
   sourcemap: false,
-  treeshake: true,
+  treeshake: false,
   minify: false,
   clean: true,
   shims: true,
