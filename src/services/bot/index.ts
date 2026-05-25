@@ -165,8 +165,8 @@ export class MyBot {
         longTermMemory,
         botName: bot!.name,
         botProfile: bot!.profile.trim(),
-        masterName: master!.name,
-        masterProfile: master!.profile.trim(),
+        masterName: master?.name || "用户",
+        masterProfile: master?.profile?.trim() || "一位用户",
         roomName: room!.name,
         roomIntroduction: room!.description.trim(),
         messages:
@@ -185,13 +185,14 @@ export class MyBot {
     );
     const userPrompt = buildPrompt(userTemplate, {
       message: formatMsg({
-        name: master!.name,
+        name: master?.name || "用户",
         text: msg.text,
         timestamp: msg.timestamp,
       }),
     });
     // 添加请求消息到 DB
-    await this.manager.onMessage(ctx, { ...msg, sender: master! });
+    await this.manager.onMessage(ctx, { ...msg, sender: master || bot! });
+
     const stream = await MyBot.chatWithStreamResponse({
       system: systemPrompt,
       user: userPrompt,

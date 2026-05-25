@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync } from "fs";
+import { copyFileSync, existsSync, unlinkSync } from "fs";
 import {
   MiIOT,
   MiNA,
@@ -30,6 +30,10 @@ export type BaseSpeakerConfig = MiServiceConfig & {
    * 小米账号 ID，用于多账号 .mi.json 隔离
    */
   xiaomiAccountId?: string;
+  /**
+   * 所属用户的用户名，用于日志标识和过滤
+   */
+  username?: string;
   /**
    * 启用调试（仅调试 MiGPT 相关日志）
    */
@@ -131,7 +135,11 @@ export class BaseSpeaker {
     this.wakeUpCommand = wakeUpCommand;
     this.playingCommand = playingCommand;
     this._xiaomiAccountId = config.xiaomiAccountId;
-    this.logger = Logger.create({ tag: `Speaker[${config.did || "unknown"}]` });
+    const tagSuffix = `${config.did || "unknown"}`;
+    this.logger = Logger.create({
+      tag: config.username ? `Speaker[${config.username}/${tagSuffix}]` : `Speaker[${tagSuffix}]`,
+      username: config.username,
+    });
   }
 
   private _xiaomiAccountId?: string;
@@ -143,8 +151,32 @@ export class BaseSpeaker {
   async loadAccountFile() {
     if (!this._xiaomiAccountId) return;
     const accountMiPath = this._miFilePath(this._xiaomiAccountId);
+    const config = this.config as any;
     if (existsSync(accountMiPath)) {
-      copyFileSync(accountMiPath, ".mi.json");
+      // 如果缓存中的 passToken 与当前配置不一致，说明用户更新了 passToken，
+      // 丢弃旧缓存，用新 passToken 重新登录
+      const cached = await readJSON(accountMiPath);
+      const cachedPassToken = cached?.mina?.pass?.passToken || cached?.miiot?.pass?.passToken;
+      if (config.passToken && cachedPassToken !== config.passToken) {
+        try { unlinkSync(accountMiPath); } catch {}
+      } else {
+        copyFileSync(accountMiPath, ".mi.json");
+        return;
+      }
+    }
+    // 无缓存文件或缓存已过期，若配置了 passToken 则预填充 .mi.json，
+    // 避免 mi-service-lite 走密码登录触发异地安全验证。
+    if (config.passToken) {
+      const pass = { passToken: config.passToken };
+      // mi-service-lite 要求 account 必须有 userId 和 password，否则直接 return
+      // 当仅用 passToken 登录时，填入占位值让检查通过
+      await writeJSON(".mi.json", {
+        mina: { pass, userId: config.userId, password: config.password || "passToken" },
+        miiot: { pass, userId: config.userId, password: config.password || "passToken" },
+      });
+    } else {
+      // 无 passToken，删除可能存在的旧 .mi.json 确保干净登录
+      try { unlinkSync(".mi.json"); } catch {}
     }
   }
 

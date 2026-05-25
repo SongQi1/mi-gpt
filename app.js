@@ -5,14 +5,15 @@ import { fileURLToPath } from "url";
 import { createHash, randomBytes } from "crypto";
 import {
   initDB, runWithDB, kPrisma,
-  validateAuthToken, createAuthToken, registerWebUser, loginWebUser,
+  validateAuthToken, createAuthToken, registerWebUser, loginWebUser, deleteWebUser,
   getAccounts, createAccount, updateAccount, deleteAccount, getAccount,
   createSpeaker, updateSpeaker, deleteSpeaker, getSpeakers,
-  manager,
+  manager, LoggerManager,
 } from "./dist/index.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const editorPath = join(__dirname, "speakers-editor.html");
+const logsPath = join(__dirname, "logs.html");
 const PORT = parseInt(process.env.CONFIG_PORT || "8408", 10);
 
 // ---- Password hashing ----
@@ -107,6 +108,48 @@ async function main() {
       res.end(readFileSync(editorPath, "utf-8"));
       return;
     }
+    if (req.method === "GET" && url === "/logs") {
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      });
+      res.end(readFileSync(logsPath, "utf-8"));
+      return;
+    }
+
+    // 公开: 默认角色配置（从 .migpt.js 读取）
+    if (req.method === "GET" && url === "/api/defaults") {
+      const configPath = join(__dirname, ".migpt.js");
+      if (!existsSync(configPath)) {
+        sendJSON(res, 200, {});
+        return;
+      }
+      try {
+        const config = (await import(`${configPath}?t=${Date.now()}`)).default;
+        const speaker = config.speaker || {};
+        sendJSON(res, 200, {
+          botName: config.bot?.name || "",
+          botProfile: config.bot?.profile || "",
+          masterName: config.master?.name || "",
+          masterProfile: config.master?.profile || "",
+          roomName: config.room?.name || "",
+          roomDescription: config.room?.description || "",
+          systemTemplate: config.systemTemplate || "",
+          callAIKeywords: speaker.callAIKeywords || [],
+          wakeUpKeywords: speaker.wakeUpKeywords || [],
+          exitKeywords: speaker.exitKeywords || [],
+          switchSpeakerKeywords: speaker.switchSpeakerKeywords || [],
+          onEnterAI: speaker.onEnterAI || [],
+          onExitAI: speaker.onExitAI || [],
+          onAIAsking: speaker.onAIAsking || [],
+          onAIReplied: speaker.onAIReplied || [],
+          onAIError: speaker.onAIError || [],
+        });
+      } catch {
+        sendJSON(res, 200, {});
+      }
+      return;
+    }
 
     // ---- Auth endpoints ----
     if (req.method === "POST" && url === "/api/auth/register") {
@@ -152,6 +195,18 @@ async function main() {
     if (req.method === "GET" && url === "/api/me") {
       const user = await kPrisma.webUser.findUnique({ where: { id: webUserId } });
       sendJSON(res, 200, { username: user?.username });
+      return;
+    }
+
+    // DELETE /api/auth/me — 注销登录账号，级联删除所有关联数据
+    if (req.method === "DELETE" && url === "/api/auth/me") {
+      // 先停掉该用户所有正在运行的小米账号实例
+      const accounts = await getAccounts(webUserId);
+      for (const a of accounts) {
+        await manager.stopAccount(a.id);
+      }
+      await deleteWebUser(webUserId);
+      sendJSON(res, 200, { ok: true });
       return;
     }
 
@@ -256,6 +311,55 @@ async function main() {
     if (match) {
       const ok = await deleteSpeaker(match.sid);
       sendJSON(res, ok ? 200 : 404, { ok });
+      return;
+    }
+
+    // GET /api/accounts/:id/status
+    match = matchRoute(req.method, url, "GET /api/accounts/:id/status");
+    if (match) {
+      const account = await getAccount(match.id, webUserId);
+      if (!account) {
+        sendJSON(res, 404, { error: "账号不存在" });
+        return;
+      }
+      const status = manager.getAccountStatus(match.id);
+      sendJSON(res, 200, status);
+      return;
+    }
+
+    // GET /api/logs
+    if (req.method === "GET" && url === "/api/logs") {
+      const urlParams = new URLSearchParams(req.url.split("?")[1] || "");
+      const tag = urlParams.get("tag") || undefined;
+      const user = await kPrisma.webUser.findUnique({ where: { id: webUserId } });
+      const logs = LoggerManager.getLogs({ tag, username: user?.username, limit: 300 });
+      sendJSON(res, 200, logs);
+      return;
+    }
+
+    // GET /api/logs/history
+    if (req.method === "GET" && url === "/api/logs/history") {
+      const urlParams = new URLSearchParams(req.url.split("?")[1] || "");
+      const from = urlParams.get("from") || "";
+      const to = urlParams.get("to") || "";
+      const tag = urlParams.get("tag") || undefined;
+      const level = urlParams.get("level") || undefined;
+      if (!from || !to) {
+        sendJSON(res, 400, { error: "from 和 to 参数必填 (YYYY-MM-DD)" });
+        return;
+      }
+      const fromDate = new Date(from + "T00:00:00");
+      const toDate = new Date(to + "T23:59:59");
+      const daysDiff = Math.round((toDate.getTime() - fromDate.getTime()) / 86400000);
+      if (daysDiff < 0 || daysDiff > 31) {
+        sendJSON(res, 400, { error: "时间范围不能超过31天" });
+        return;
+      }
+      const user = await kPrisma.webUser.findUnique({ where: { id: webUserId } });
+      const logs = LoggerManager.getHistoryLogs({
+        from, to, tag, username: user?.username, level, limit: 1000,
+      });
+      sendJSON(res, 200, logs);
       return;
     }
 

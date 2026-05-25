@@ -62,7 +62,7 @@ export class LongTermMemoryAgent {
       jsonMode: true,
       requestId: `update-long-memory-${memory?.id}`,
       user: buildPrompt(userTemplate, {
-        masterName: master.name,
+        masterName: master?.name || "用户",
         botName: bot.name,
         longTermMemory: lastMemory?.text ?? "暂无长期记忆",
         shortTermMemory: lastOf(newMemories)!.text,

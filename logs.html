@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b09">
+<title>MiGPT · 信号监控</title>
+<style>
+  :root {
+    --bg: #0d0b09;
+    --surface: #161310;
+    --surface2: #1e1a15;
+    --border: #2a241c;
+    --border-active: #5a4a32;
+    --text: #e0d7c6;
+    --text-dim: #8a7e6b;
+    --text-faint: #5c5345;
+    --amber: #e8a840;
+    --amber-dim: #2a2012;
+    --amber-glow: rgba(232,168,64,0.12);
+    --green: #5a9e7c;
+    --green-glow: rgba(90,158,124,0.2);
+    --red: #c06050;
+    --red-glow: rgba(192,96,80,0.15);
+    --cyan: #6aacb0;
+    --radius: 6px;
+    --radius-lg: 12px;
+    --font: "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --safe-bottom: env(safe-area-inset-bottom, 12px);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+    overflow-x: hidden;
+  }
+
+  /* ---- Grain texture ---- */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+  }
+
+  /* ---- HEADER ---- */
+  .header {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(13,11,9,0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 6px; flex-shrink: 0;
+    background: linear-gradient(135deg, #3a2a10, #5a3a14);
+    display: grid; grid-template-columns: 3px 3px 3px; grid-template-rows: 14px 3px 3px;
+    gap: 2px; align-content: center; justify-content: center;
+    box-shadow: 0 0 12px rgba(232,168,64,0.15);
+    position: relative;
+  }
+  .logo::after {
+    content: ''; position: absolute; inset: 1px; border-radius: 5px;
+    border: 1px solid rgba(232,168,64,0.2);
+  }
+  .logo span { display: block; border-radius: 1px; background: var(--amber); }
+  .logo span:nth-child(1) { grid-row: 1; grid-column: 1; height: 100%; }
+  .logo span:nth-child(2) { grid-row: 1 / 3; grid-column: 2; }
+  .logo span:nth-child(3) { grid-row: 1 / 4; grid-column: 3; }
+  .logo span:nth-child(4) { grid-row: 3; grid-column: 1; }
+  .logo span:nth-child(5) { grid-row: 4; grid-column: 1; }
+  .header h1 {
+    font-size: 15px; font-weight: 600; letter-spacing: 0.5px;
+    color: var(--text);
+  }
+  .header sub {
+    font-size: 11px; color: var(--text-dim); font-weight: 400;
+    margin-left: 4px; opacity: 0.7;
+  }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .signal-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--text-faint); transition: background 0.4s, box-shadow 0.4s;
+  }
+  .signal-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green-glow); animation: dotPulse 2.5s ease-in-out infinite; }
+  @keyframes dotPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .back-link {
+    color: var(--text-dim); text-decoration: none; font-size: 12px;
+    padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border);
+    transition: color 0.2s, border-color 0.2s; min-height: 40px; display: inline-flex; align-items: center;
+  }
+  .back-link:active { color: var(--amber); border-color: var(--amber); }
+
+  /* ---- TABS ---- */
+  .tab-bar {
+    display: flex; padding: 8px 16px; gap: 0; position: sticky; top: 58px; z-index: 10;
+    background: rgba(13,11,9,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 0; text-align: center; font-family: var(--font);
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--text-dim); transition: color 0.2s, border-color 0.2s;
+    min-height: 44px;
+  }
+  .tab-btn.active { color: var(--amber); border-bottom-color: var(--amber); }
+  .tab-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: -2px; border-radius: 2px; }
+  .tab-btn:active { color: var(--amber); }
+
+  /* ---- PANEL ---- */
+  .panel { display: none; padding: 12px 16px; position: relative; z-index: 1; }
+  .panel.active { display: block; animation: panelIn 0.25s ease; }
+  @keyframes panelIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---- SPEAKER CHIPS ---- */
+  .chip-bar {
+    display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 12px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .chip-bar::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; padding: 7px 14px; border-radius: 20px; font-size: 12px; font-family: var(--font);
+    cursor: pointer; white-space: nowrap;
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+    transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+    min-height: 38px; display: flex; align-items: center; gap: 6px;
+  }
+  .chip.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); box-shadow: 0 0 12px var(--amber-glow); }
+  .chip:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; }
+  .chip-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .chip-dot.running { background: var(--green); box-shadow: 0 0 5px var(--green-glow); }
+  .chip-dot.stopped { background: var(--text-faint); }
+  .chip-dot.error { background: var(--red); }
+
+  /* ---- LOG FEED ---- */
+  .log-feed {
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    background: var(--surface); overflow: hidden;
+    position: relative;
+  }
+  /* Scanline overlay */
+  .log-feed::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px);
+    border-radius: var(--radius-lg);
+  }
+  .log-scroll {
+    max-height: calc(100vh - 360px); overflow-y: auto; padding: 8px 10px;
+    position: relative; z-index: 1; -webkit-overflow-scrolling: touch;
+  }
+  .log-entry {
+    padding: 4px 0; font-size: 12px; line-height: 1.6;
+    border-bottom: 1px solid rgba(255,255,255,0.025);
+    word-break: break-all; animation: logIn 0.3s ease both;
+  }
+  @keyframes logIn { from { opacity: 0; transform: translateX(-4px); } to { opacity: 1; transform: translateX(0); } }
+  .log-entry:last-child { border-bottom: none; }
+  .le-time { color: var(--text-faint); font-size: 11px; }
+  .le-tag { color: var(--text-dim); font-size: 11px; }
+  .log-entry.le-debug { color: var(--text-faint); }
+  .log-entry.le-error { color: var(--red); }
+  .log-entry.le-success { color: var(--green); }
+  .log-empty {
+    text-align: center; padding: 48px 20px; color: var(--text-faint);
+    font-size: 13px;
+  }
+
+  /* ---- HISTORY CONTROLS ---- */
+  .hist-controls {
+    display: flex; flex-direction: column; gap: 10px; padding: 4px 0 12px;
+  }
+  .hist-row {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .hist-row label { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .hist-row input[type="date"],
+  .hist-row select {
+    background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 10px 10px; font-size: 12px; font-family: var(--font);
+    min-height: 44px; -webkit-appearance: none;
+  }
+  .hist-row input[type="date"]:focus-visible,
+  .hist-row select:focus-visible { outline: 2px solid var(--amber); outline-offset: 1px; border-color: var(--amber); }
+  .btn-query {
+    background: var(--amber); color: #0d0b09; border: none;
+    padding: 10px 20px; border-radius: var(--radius); font-size: 13px;
+    font-family: var(--font); font-weight: 600; cursor: pointer;
+    min-height: 44px; transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-query:active { background: #c88a30; transform: scale(0.97); box-shadow: 0 0 20px var(--amber-glow); }
+  .btn-query:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  .btn-query.loading { pointer-events: none; position: relative; color: transparent !important; }
+  .btn-query.loading::after {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    border: 2px solid rgba(13,11,9,0.3); border-top-color: #0d0b09;
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- NO AUTH ---- */
+  .no-auth {
+    text-align: center; padding: 80px 24px; position: relative; z-index: 1;
+  }
+  .no-auth p { color: var(--text-dim); font-size: 15px; margin-bottom: 16px; }
+  .no-auth a { color: var(--amber); text-decoration: none; font-weight: 600; }
+
+  /* ---- LOG COUNT ---- */
+  .log-count { font-size: 11px; color: var(--text-faint); flex-shrink: 0; }
+
+  @media (min-width: 700px) {
+    .tab-bar, .panel { max-width: 700px; margin-left: auto; margin-right: auto; }
+    .header { padding: 12px 24px; }
+    .log-scroll { max-height: calc(100vh - 340px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div>
+      <h1 id="page-title">信号监控</h1>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="signal-dot" id="conn-dot" title="连接状态"></span>
+    <span style="font-size:11px;color:var(--text-faint);" id="user-label"></span>
+    <a href="/editor" class="back-link">← 配置</a>
+  </div>
+</div>
+
+<!-- NO AUTH -->
+<div id="no-auth" style="display:none;" class="no-auth">
+  <p>请先登录后再查看日志</p>
+  <a href="/login">去登录 →</a>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar" id="tab-bar" style="display:none;">
+  <button class="tab-btn active" data-tab="realtime" onclick="switchTab('realtime')">实时信号</button>
+  <button class="tab-btn" data-tab="history" onclick="switchTab('history')">历史回溯</button>
+</div>
+
+<!-- REALTIME PANEL -->
+<div class="panel active" id="panel-realtime">
+  <div class="chip-bar" id="rt-chips"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;">
+    <span style="font-size:11px;color:var(--text-faint);" id="rt-count"></span>
+    <div style="display:flex;gap:4px;">
+      <button class="chip" data-lvl="all" onclick="setRtLevel('all',this)" style="min-height:32px;padding:4px 12px;font-size:11px;">全部</button>
+      <button class="chip" data-lvl="error" onclick="setRtLevel('error',this)" style="min-height:32px;padding:4px 12px;font-size:11px;">错误</button>
+      <button class="chip" data-lvl="success" onclick="setRtLevel('success',this)" style="min-height:32px;padding:4px 12px;font-size:11px;">成功</button>
+    </div>
+  </div>
+  <div class="log-feed">
+    <div class="log-scroll" id="rt-list"><div class="log-empty">等待信号...</div></div>
+  </div>
+</div>
+
+<!-- HISTORY PANEL -->
+<div class="panel" id="panel-history">
+  <div class="hist-controls">
+    <div class="hist-row">
+      <label>从 <input type="date" id="hist-from"></label>
+      <label>到 <input type="date" id="hist-to"></label>
+    </div>
+    <div class="hist-row">
+      <select id="hist-speaker" aria-label="筛选音箱"><option value="">全部音箱</option></select>
+      <select id="hist-level" aria-label="筛选日志级别">
+        <option value="">全部级别</option>
+        <option value="error">错误</option>
+        <option value="success">成功</option>
+        <option value="debug">调试</option>
+        <option value="log">信息</option>
+      </select>
+      <button class="btn-query" id="hist-query-btn" onclick="fetchHistory()">回溯</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:0 4px 8px;">
+    <span style="font-size:11px;color:var(--text-faint);" id="hist-count"></span>
+  </div>
+  <div class="log-feed">
+    <div class="log-scroll" id="hist-list"><div class="log-empty">选择日期范围后查询</div></div>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("mi_gpt_token");
+const API = window.location.origin;
+
+function $(id) { return document.getElementById(id); }
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function api(method, path) {
+  const opts = { method, headers: {} };
+  if (token) opts.headers["Authorization"] = `Bearer ${token}`;
+  const r = await fetch(`${API}${path}`, { ...opts, signal: AbortSignal.timeout(15000) });
+  if (r.status === 401) { showNoAuth(); throw new Error("unauthorized"); }
+  return r;
+}
+
+function showNoAuth() {
+  $('no-auth').style.display = '';
+  $('tab-bar').style.display = 'none';
+  qsa('.panel').forEach(p => p.classList.remove('active'));
+  if (rtTimer) { clearInterval(rtTimer); rtTimer = 0; }
+}
+
+function qsa(sel, el) { return Array.from((el||document).querySelectorAll(sel)); }
+
+// ---- Connection ----
+async function checkConnection() {
+  const dot = $('conn-dot');
+  try {
+    const r = await fetch(`${API}/ping`, { signal: AbortSignal.timeout(3000) });
+    dot.className = r.ok ? 'signal-dot live' : 'signal-dot';
+  } catch (_) { dot.className = 'signal-dot'; }
+}
+
+// ---- Tab switching ----
+function switchTab(name) {
+  qsa('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  qsa('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+}
+
+// ---- Speaker list ----
+let userSpeakers = [];
+
+async function loadSpeakers() {
+  try {
+    const r = await api('GET', '/api/accounts');
+    if (!r.ok) return;
+    const accounts = await r.json();
+    userSpeakers = [];
+    for (const a of accounts) {
+      try {
+        const sr = await api('GET', `/api/accounts/${a.id}/status`);
+        if (!sr.ok) continue;
+        const status = await sr.json();
+        for (const sp of (status.speakers || [])) {
+          userSpeakers.push({ did: sp.did, name: sp.name || sp.did, status: sp.status || 'stopped' });
+        }
+      } catch {}
+    }
+    renderChips();
+  } catch {}
+}
+
+function renderChips() {
+  const bar = $('rt-chips');
+  let html = `<button class="chip active" data-did="" onclick="selectSpeaker('',this)">全部设备</button>`;
+  for (const sp of userSpeakers) {
+    html += `<button class="chip" data-did="${esc(sp.did)}" onclick="selectSpeaker('${esc(sp.did)}',this)">
+      <span class="chip-dot ${sp.status}"></span>${esc(sp.name||sp.did)}
+    </button>`;
+  }
+  bar.innerHTML = html;
+
+  // Also populate history speaker select
+  const histSel = $('hist-speaker');
+  histSel.innerHTML = '<option value="">全部音箱</option>' +
+    userSpeakers.map(s => `<option value="${esc(s.did)}">${esc(s.name||'未知')}</option>`).join('');
+}
+
+// ---- Real-time ----
+let rtLevel = 'all';
+let rtSpeaker = '';
+let rtTimer = 0;
+let _rtDigest = '';  // fingerprint of last rendered data — skip re-render if unchanged
+
+function _digest(logs) {
+  // fingerprint first 10 entries + total count to detect changes without full compare
+  const head = logs.slice(0, 10).map(l => l.timestamp + l.level + l.tag + l.message).join('|');
+  return `${logs.length}|${head}`;
+}
+
+function selectSpeaker(did, btn) {
+  rtSpeaker = did;
+  _rtDigest = '';
+  qsa('#rt-chips .chip').forEach(c => c.classList.toggle('active', c.dataset.did === did));
+  fetchRealtime();
+}
+
+function setRtLevel(level, btn) {
+  rtLevel = level;
+  _rtDigest = '';
+  const bar = btn.parentElement;
+  qsa('.chip', bar).forEach(c => c.classList.toggle('active', c.dataset.lvl === level));
+  fetchRealtime();
+}
+
+function startRealtime() {
+  fetchRealtime();
+  rtTimer = setInterval(fetchRealtime, 2000);
+}
+
+async function fetchRealtime() {
+  try {
+    const params = new URLSearchParams();
+    if (rtSpeaker) params.set('tag', rtSpeaker);
+    params.set('limit', '500');
+    const r = await api('GET', `/api/logs?${params.toString()}`);
+    if (!r.ok) return;
+    let logs = await r.json();
+    if (rtLevel !== 'all') logs = logs.filter(l => l.level === rtLevel);
+    const d = _digest(logs);
+    if (d === _rtDigest) return;  // no change, skip DOM update
+    _rtDigest = d;
+    renderLogs('rt-list', logs);
+    $('rt-count').textContent = `${logs.length} 条`;
+  } catch {}
+}
+
+// ---- History ----
+async function fetchHistory() {
+  const from = $('hist-from').value;
+  const to = $('hist-to').value;
+  if (!from || !to) {
+    $('hist-list').innerHTML = '<div class="log-empty">请选择日期范围</div>';
+    return;
+  }
+  const btn = $('hist-query-btn');
+  btn.classList.add('loading');
+  try {
+    const tag = $('hist-speaker').value;
+    const level = $('hist-level').value;
+    const params = new URLSearchParams({ from, to });
+    if (tag) params.set('tag', tag);
+    if (level) params.set('level', level);
+    const r = await api('GET', `/api/logs/history?${params.toString()}`);
+    if (!r.ok) { btn.classList.remove('loading'); $('hist-list').innerHTML = '<div class="log-empty">查询失败</div>'; return; }
+    const logs = await r.json();
+    renderLogs('hist-list', logs);
+    $('hist-count').textContent = `${logs.length} 条`;
+    btn.classList.remove('loading');
+  } catch { btn.classList.remove('loading'); }
+}
+
+// ---- Render ----
+function renderLogs(containerId, logs) {
+  const container = $(containerId);
+  if (!logs.length) {
+    container.innerHTML = '<div class="log-empty">暂无日志</div>';
+    return;
+  }
+  container.innerHTML = logs.map((l, i) => {
+    const cls = 'log-entry le-' + l.level;
+    const time = l.timestamp.length >= 19 ? l.timestamp.slice(11, 19) : l.timestamp;
+    const tag = l.tag.length > 20 ? l.tag.slice(0, 18) + '…' : l.tag;
+    return `<div class="${cls}" style="animation-delay:${Math.min(i*8, 400)}ms">
+      <span class="le-time">${esc(time)}</span>
+      <span class="le-tag">[${esc(tag)}]</span>
+      ${esc(l.message)}
+    </div>`;
+  }).join('');
+  // Auto-scroll to bottom for real-time
+  if (containerId === 'rt-list') {
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+}
+
+// ---- Init ----
+async function init() {
+  if (!token) { showNoAuth(); return; }
+  try {
+    const r = await api('GET', '/api/me');
+    if (!r.ok) { showNoAuth(); return; }
+    const data = await r.json();
+    $('user-label').textContent = data.username || '';
+    $('tab-bar').style.display = '';
+    await loadSpeakers();
+    startRealtime();
+    const today = new Date().toISOString().slice(0, 10);
+    $('hist-from').value = today;
+    $('hist-to').value = today;
+    checkConnection();
+    setInterval(checkConnection, 8000);
+  } catch { showNoAuth(); }
+}
+init();
+</script>
+</body>
+</html>

@@ -2,24 +2,35 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MiGPT 配置</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<meta name="theme-color" content="#faf6ef">
+<title>MiGPT · 信号路由</title>
 <style>
   :root {
-    --bg: #07070b;
-    --surface: #0f0f17;
-    --surface2: #16161f;
-    --border: #22222d;
-    --text: #d0d0dc;
-    --text-dim: #636374;
-    --accent: #f0a030;
-    --accent-dim: #4a2e10;
-    --accent-subtle: rgba(240,160,48,0.08);
-    --cyan: #20c8a0;
-    --red: #e04050;
-    --radius: 10px;
-    --font: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-    --mono: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+    --bg: #faf6ef;
+    --surface: #ffffff;
+    --surface2: #f4efe5;
+    --border: #e8e2d5;
+    --border-hover: #cec4ae;
+    --text: #2d2319;
+    --text-dim: #6b5f52;
+    --text-faint: #948878;
+    --accent: #b55228;
+    --accent-dim: #fdf3ec;
+    --accent-glow: rgba(181,82,40,0.1);
+    --cyan: #3d7d6e;
+    --red: #b53d36;
+    --red-dim: #fef0ee;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.04);
+    --font: "DM Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    --font-display: "DM Serif Display", "PingFang SC", "Hiragino Mincho ProN", serif;
+    --mono: "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
     --safe-bottom: env(safe-area-inset-bottom, 16px);
   }
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -31,311 +42,466 @@
     line-height: 1.5;
     min-height: 100vh;
     -webkit-tap-highlight-color: transparent;
-    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
   }
-  .app { max-width:680px; margin:0 auto; padding:20px 16px calc(90px + var(--safe-bottom)); position:relative; z-index:1; }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(circle, rgba(0,0,0,0.025) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .app { max-width: 680px; margin: 0 auto; padding: 20px 16px calc(100px + var(--safe-bottom)); position: relative; z-index: 1; }
 
-  /* Header */
+  /* ===== HEADER ===== */
   .header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:12px 0 18px; margin-bottom:8px;
-    border-bottom:1px solid var(--border);
-    position:sticky; top:0; background:rgba(7,7,11,0.85);
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    z-index:10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 0 16px; margin-bottom: 8px;
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(250,246,239,0.92);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
   }
-  .header-left { display:flex; align-items:center; gap:12px; }
-  .logo {
-    width:34px; height:34px; border-radius:9px;
-    background: linear-gradient(135deg, #f0a030, #e08020, #d06018);
-    display:flex; align-items:center; justify-content:center;
-    font-size:17px; font-weight:700; color:#0a0a0a; flex-shrink:0;
-    box-shadow:0 2px 8px rgba(240,160,48,0.2);
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 38px; height: 38px; border-radius: 8px; flex-shrink: 0;
+    background: var(--accent);
+    display: grid; grid-template-columns: 4px 4px 4px; grid-template-rows: 18px 4px 4px;
+    gap: 3px; align-content: center; justify-content: center;
+    box-shadow: 0 0 16px var(--accent-glow);
   }
-  .header h1 { font-size:18px; font-weight:600; letter-spacing:-0.3px; }
-  .header sub { font-size:11px; color:var(--text-dim); font-weight:400; display:block; margin-top:1px; }
-  .conn-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; background:var(--text-dim); transition:all 0.3s; }
-  .conn-dot.online { background:var(--cyan); box-shadow:0 0 8px rgba(32,200,160,0.5); }
-  .logout-link {
-    background:none; border:none; color:var(--text-dim); cursor:pointer;
-    font-size:13px; padding:4px 8px;
+  .logo-mark span {
+    display: block; border-radius: 1px; background: #faf6ef;
   }
-  .logout-link:active { color:var(--text); }
+  .logo-mark span:nth-child(1) { grid-row: 1; grid-column: 1; height: 100%; }
+  .logo-mark span:nth-child(2) { grid-row: 1 / 3; grid-column: 2; }
+  .logo-mark span:nth-child(3) { grid-row: 1 / 4; grid-column: 3; }
+  .logo-mark span:nth-child(4) { grid-row: 3; grid-column: 1; }
+  .logo-mark span:nth-child(5) { grid-row: 4; grid-column: 1; }
+  .header h1 { font-size: 20px; font-weight: 650; letter-spacing: -0.3px; color: var(--text); font-family: var(--font-display); }
+  .header sub { font-size: 12px; color: var(--text-dim); font-weight: 400; display: block; margin-top: 1px; }
+  .signal-lamp { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--text-faint); transition: background 0.4s, box-shadow 0.4s; }
+  .signal-lamp.live { background: var(--cyan); box-shadow: 0 0 10px rgba(77,158,139,0.5); animation: lampPulse 2.5s ease-in-out infinite; }
+  @keyframes lampPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .logout-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 8px 12px; border-radius: var(--radius); transition: color 0.2s, background 0.2s; font-family: var(--font); }
+  .logout-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .logout-btn:active { color: var(--text); background: var(--surface2); }
 
-  /* Account Tabs */
-  .account-tabs {
-    display:flex; gap:6px; overflow-x:auto; padding:4px 0 16px;
-    -webkit-overflow-scrolling:touch; scrollbar-width:none;
-  }
-  .account-tabs::-webkit-scrollbar { display:none; }
+  /* ===== ACCOUNT TABS ===== */
+  .account-tabs { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 18px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .account-tabs::-webkit-scrollbar { display: none; }
   .account-tab {
-    flex-shrink:0; padding:8px 16px; border-radius:20px;
-    font-size:13px; font-weight:500; cursor:pointer;
-    background:var(--surface); border:1px solid var(--border); color:var(--text-dim);
-    transition:all 0.2s; white-space:nowrap;
-    display:flex; align-items:center; gap:6px;
+    flex-shrink: 0; padding: 9px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+    transition: border-color 0.25s, background 0.25s, color 0.25s, box-shadow 0.25s; white-space: nowrap; display: flex; align-items: center; gap: 7px;
   }
-  .account-tab.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
-  .account-tab:active { transform:scale(0.96); }
-  .account-tab .tab-dot {
-    width:6px; height:6px; border-radius:50%; flex-shrink:0;
+  .account-tab.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+  .account-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .account-tab:active { transform: scale(0.96); }
+  .tab-lamp { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+  .tab-lamp.on { background: var(--cyan); box-shadow: 0 0 6px rgba(77,158,139,0.4); }
+  .tab-lamp.off { background: var(--text-faint); }
+  .tab-add {
+    flex-shrink: 0; padding: 9px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer;
+    background: transparent; border: 1px dashed var(--border); color: var(--text-dim);
+    transition: border-color 0.25s, color 0.25s; white-space: nowrap;
   }
-  .account-tab .tab-dot.running { background:var(--cyan); }
-  .account-tab .tab-dot.stopped { background:var(--text-dim); }
-  .account-tab-add {
-    flex-shrink:0; padding:8px 14px; border-radius:20px;
-    font-size:13px; font-weight:500; cursor:pointer;
-    background:transparent; border:1px dashed var(--border); color:var(--text-dim);
-    transition:all 0.2s; white-space:nowrap;
-  }
-  .account-tab-add:active { border-color:var(--accent); color:var(--accent); }
+  .tab-add:active { border-color: var(--accent); color: var(--accent); }
+  .tab-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  /* Section */
-  .section { margin-bottom:28px; }
-  .section-header {
-    display:flex; align-items:center; justify-content:space-between;
-    margin-bottom:12px; padding-left:2px;
+  /* ===== SECTION ===== */
+  .section { margin-bottom: 32px; }
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
   }
-  .section-title {
-    font-size:11px; font-weight:600; text-transform:uppercase;
-    letter-spacing:1.5px; color:var(--text-dim);
+  .section-label {
+    font-size: 11px; font-weight: 650; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--text-faint);
+    display: flex; align-items: center; gap: 8px;
   }
-  .section-title::before {
-    content:''; display:inline-block; width:3px; height:12px;
-    background:var(--accent); border-radius:2px;
-    margin-right:8px; vertical-align:middle; margin-top:-1px;
+  .section-label::before {
+    content: ''; display: inline-block; width: 10px; height: 2px;
+    background: var(--accent); border-radius: 1px;
   }
-  .section-count {
-    font-family:var(--mono); font-size:11px; color:var(--accent);
-    background:var(--accent-dim); padding:3px 10px; border-radius:10px;
+  .section-badge {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    background: var(--accent-dim); padding: 4px 10px; border-radius: 12px; font-weight: 500;
   }
 
-  /* Buttons */
+  /* ===== FIELD ===== */
+  .field { display: flex; flex-direction: column; gap: 9px; }
+  .field-label {
+    font-size: 11px; font-weight: 600; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .field-label .hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--text-faint); }
+  .field input, .field textarea {
+    font-family: var(--font); font-size: 14px; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 11px 12px;
+    transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none;
+  }
+  .field input:focus-visible, .field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .field input.mono { font-family: var(--mono); font-size: 13px; }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .form-grid { display: flex; flex-direction: column; gap: 14px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  /* ===== PASSWORD ===== */
+  .pw-wrap { position: relative; display: flex; }
+  .pw-wrap input { flex: 1; padding-right: 42px; }
+  .pw-toggle {
+    position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-dim); cursor: pointer;
+    font-size: 16px; padding: 8px; display: flex; align-items: center;
+    transition: color 0.2s;
+  }
+  .pw-toggle:active { color: var(--accent); }
+
+  /* ===== TAGS ===== */
+  .tag-input-wrap {
+    display: flex; flex-wrap: wrap; gap: 9px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 7px; min-height: 44px; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .tag-input-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--accent-dim); color: var(--accent);
+    padding: 4px 9px; border-radius: 4px; font-size: 13px;
+    font-family: var(--mono);
+  }
+  .tag-remove { cursor: pointer; font-size: 18px; line-height: 1; opacity: 0.5; padding: 6px 8px; border: none; background: none; color: inherit; font-family: var(--font); transition: opacity 0.15s; min-width: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center; }
+  .tag-remove:active { opacity: 1; color: var(--red); }
+  .tag-remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 2px; }
+  .tag-input {
+    border: none; background: transparent; color: var(--text);
+    font-family: var(--mono); font-size: 13px;
+    flex: 1; min-width: 80px; padding: 4px 6px;
+  }
+  .tag-input:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 2px; }
+
+  /* ===== ROLE GROUP ===== */
+  .role-group {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 16px; margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+  .role-group:focus-within { border-color: var(--border-hover); }
+  .role-group-title {
+    font-size: 11px; font-weight: 650; color: var(--text-faint);
+    text-transform: uppercase; letter-spacing: 1.2px;
+    margin-bottom: 12px; padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 7px;
+  }
+  .role-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ===== SPEAKER CARD ===== */
+  .speaker-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    margin-bottom: 12px; overflow: hidden; transition: border-color 0.25s;
+  }
+  .speaker-card.expanded { border-color: var(--border-hover); }
+  .speaker-card::before {
+    content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px;
+    border-radius: 0 2px 2px 0; background: transparent; transition: background 0.25s;
+  }
+  .speaker-card.expanded::before { background: var(--accent); }
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 15px 16px; cursor: pointer; position: relative; z-index: 1;
+  }
+  .speaker-card.expanded .card-header { padding-bottom: 8px; }
+  .card-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .card-seq {
+    font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--accent);
+    min-width: 30px; letter-spacing: -1px; opacity: 0.7;
+  }
+  .speaker-card.expanded .card-seq { opacity: 1; }
+  .card-title { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-subtitle { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .card-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .card-badge {
+    font-size: 11px; color: var(--text-faint); font-family: var(--mono);
+    max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .card-arrow {
+    font-size: 13px; color: var(--text-faint); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+  }
+  .speaker-card.expanded .card-arrow { transform: rotate(90deg); }
+  .card-body { display: none; padding: 0 16px 16px; position: relative; z-index: 1; }
+  .speaker-card.expanded .card-body { display: block; animation: cardIn 0.25s ease; }
+  @keyframes cardIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .card-divider {
+    font-size: 11px; font-weight: 650; color: var(--accent); text-transform: uppercase;
+    letter-spacing: 1.2px; padding-bottom: 8px; margin-bottom: 2px;
+    border-bottom: 1px solid var(--border);
+  }
+  .inherit-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); cursor: pointer; padding: 4px 0 8px; }
+  .inherit-row input { accent-color: var(--accent); width: 20px; height: 20px; }
+
+  /* ===== SPEAKER STATUS ===== */
+  .speaker-status-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    background: var(--text-faint); transition: background 0.3s, box-shadow 0.3s;
+  }
+  .speaker-status-dot.running { background: var(--cyan); box-shadow: 0 0 8px rgba(77,158,139,0.4); }
+  .speaker-status-dot.stopped { background: var(--red); box-shadow: 0 0 6px rgba(217,74,74,0.4); }
+  .speaker-last-seen { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+
+  /* ===== HEADER MENU ===== */
+  .menu-wrap { position: relative; }
+  .menu-trigger {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text-dim);
+    font-size: 16px; padding: 4px 12px; border-radius: var(--radius); cursor: pointer;
+    font-family: var(--font); letter-spacing: 1px; line-height: 1; transition: border-color 0.2s, color 0.2s;
+    min-height: 44px; min-width: 44px; display: flex; align-items: center;
+  }
+  .menu-trigger:active { border-color: var(--accent); color: var(--accent); }
+  .menu-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .menu-drop {
+    display: none; position: absolute; right: 0; top: calc(100% + 6px);
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow-md); min-width: 140px; z-index: 20; overflow: hidden;
+  }
+  .menu-drop.show { display: block; animation: cardIn 0.15s ease; }
+  .menu-item {
+    display: block; width: 100%; text-align: left; padding: 10px 16px;
+    background: none; border: none; color: var(--text); font-size: 13px;
+    font-family: var(--font); cursor: pointer; transition: background 0.12s; font-size: 14px;
+  }
+  .menu-item:active { background: var(--surface2); }
+  .menu-item-danger { color: var(--red); }
+  .menu-item-danger:active { background: var(--red-dim); }
+
+  /* ===== ADD SPEAKER CARD ===== */
+  .speaker-add {
+    display: block; width: 100%; font-family: var(--font);
+    border: 1px dashed var(--border); background: transparent; cursor: pointer;
+    border-radius: var(--radius-lg); transition: border-color 0.2s, color 0.2s, background 0.2s; padding: 20px 16px; text-align: center;
+    color: var(--text-dim); font-size: 14px; font-weight: 500;
+  }
+  .speaker-add:active { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+  .speaker-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ===== BUTTONS ===== */
   .btn {
-    font-family:var(--font); font-size:14px; font-weight:500;
-    padding:10px 20px; border-radius:22px; cursor:pointer;
-    border:1px solid transparent; transition:all 0.2s;
-    display:inline-flex; align-items:center; justify-content:center; gap:6px;
-    white-space:nowrap; min-height:44px;
+    font-family: var(--font); font-size: 14px; font-weight: 550; padding: 11px 22px;
+    border-radius: 22px; cursor: pointer; border: 1px solid transparent;
+    transition: background 0.2s, border-color 0.2s, transform 0.2s, box-shadow 0.2s; display: inline-flex; align-items: center;
+    justify-content: center; gap: 6px; white-space: nowrap; min-height: 44px;
   }
-  .btn-primary { background:var(--accent); color:#0c0c0c; border-color:var(--accent); font-weight:600; }
-  .btn-primary:active { background:#f5b840; transform:scale(0.97); }
-  .btn-outline { background:var(--surface); border-color:var(--border); color:var(--text); border-radius:var(--radius); }
-  .btn-outline:active { border-color:var(--text-dim); background:var(--surface2); }
-  .btn-danger { background:transparent; border-color:var(--red); color:var(--red); border-radius:var(--radius); }
-  .btn-danger:active { background:var(--red); color:#fff; }
-  .btn-sm { padding:6px 14px; font-size:13px; min-height:36px; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .btn.loading { pointer-events: none; position: relative; color: transparent !important; }
+  .btn.loading::after {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-primary { background: var(--accent); color: #ffffff; border-color: var(--accent); font-weight: 650; }
+  .btn-primary:active { background: #b55228; transform: scale(0.97); box-shadow: 0 0 24px var(--accent-glow); }
+  .btn-outline { background: var(--surface); border-color: var(--border); color: var(--text); border-radius: var(--radius); }
+  .btn-outline:active { border-color: var(--text-dim); background: var(--surface2); }
+  .btn-danger { background: transparent; border-color: var(--red); color: var(--red); border-radius: var(--radius); font-size: 13px; padding: 10px 16px; min-height: 44px; }
+  .btn-danger:active { background: var(--red-dim); color: var(--red); }
+  .btn-danger:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
+  .btn-xs { padding: 8px 16px; font-size: 12px; min-height: 44px; border-radius: 14px; }
 
-  /* Login */
+  /* ===== BOTTOM BAR ===== */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+    background: rgba(250,246,239,0.94);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px calc(10px + var(--safe-bottom)); display: flex; gap: 12px;
+  }
+  #save-btn, #restart-btn { flex: 1; font-size: 15px; position: relative; overflow: hidden; }
+  #save-btn::after, #restart-btn::after {
+    content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+    transform: translateX(-100%); transition: transform 0.6s;
+  }
+  #save-btn:active::after, #restart-btn:active::after { transform: translateX(100%); }
+  #restart-btn { background: var(--surface2); border-color: var(--border-hover); color: var(--accent); }
+  #restart-btn:active { background: var(--accent-dim); }
+
+  /* ===== TOAST ===== */
+  .toast {
+    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(10px);
+    background: var(--surface2); border: 1px solid var(--border);
+    padding: 10px 24px; border-radius: 20px; font-size: 14px;
+    z-index: 100; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== EMPTY STATE ===== */
+  .empty {
+    text-align: center; padding: 48px 20px; color: var(--text-dim);
+    border: 1px dashed var(--border); border-radius: var(--radius-lg);
+    font-size: 14px; line-height: 1.8;
+  }
+  .empty .btn { margin-top: 14px; }
+
+  /* ===== ADD ACCOUNT FORM ===== */
+  .add-acct {
+    background: var(--surface); border: 1px solid var(--accent-dim); border-radius: var(--radius-lg);
+    padding: 20px; margin-bottom: 24px;
+  }
+
+  /* ===== ID READONLY ===== */
+  .id-readonly {
+    font-family: var(--mono); font-size: 13px; color: var(--text-faint);
+    padding: 11px 12px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); opacity: 0.8;
+  }
+
+  /* ===== LOGIN ===== */
   .login-wrap {
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-height:80vh; padding:20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 85vh; padding: 20px;
   }
   .login-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:14px;
-    padding:28px 24px; width:100%; max-width:380px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 32px 24px; width: 100%; max-width: 380px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
   }
-  .login-card .logo { margin:0 auto 20px; }
-  .login-card h2 { text-align:center; font-size:20px; font-weight:600; margin-bottom:20px; }
-  .login-card .field { margin-bottom:14px; }
-  .login-card .btn { width:100%; margin-top:6px; }
-  .login-hint { text-align:center; font-size:13px; color:var(--text-dim); margin-top:14px; }
-  .login-hint a { color:var(--accent); cursor:pointer; text-decoration:none; }
-  .login-hint a:active { opacity:0.8; }
+  .login-card .logo-mark { margin: 0 auto 24px; }
+  .login-card h2 { text-align: center; font-size: 20px; font-weight: 650; margin-bottom: 22px; letter-spacing: -0.3px; }
+  .login-card .field { margin-bottom: 14px; }
+  .login-card .btn { width: 100%; margin-top: 8px; }
+  .login-hint { text-align: center; font-size: 13px; color: var(--text-dim); margin-top: 16px; }
+  .login-hint a { color: var(--accent); cursor: pointer; text-decoration: none; font-weight: 550; }
+  .login-hint a:active { opacity: 0.7; }
 
-  /* Cards */
-  .speaker-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    margin-bottom:10px; overflow:hidden; transition:border-color 0.2s;
-  }
-  .speaker-card.open { border-color:#333345; }
-  .card-header {
-    display:flex; align-items:center; justify-content:space-between;
-    padding:14px 16px; cursor:pointer;
-  }
-  .speaker-card.open .card-header { padding-bottom:10px; }
-  .card-header-left { display:flex; align-items:center; gap:10px; min-width:0; }
-  .card-index { font-family:var(--mono); font-size:12px; font-weight:600; color:var(--accent); min-width:24px; }
-  .card-title { font-weight:600; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .card-subtitle { font-size:12px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
-  .card-header-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
-  .card-id-badge { font-size:10px; color:var(--text-dim); font-family:var(--mono); max-width:130px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .card-chevron { font-size:14px; color:var(--text-dim); transition:transform 0.25s; }
-  .speaker-card.open .card-chevron { transform:rotate(90deg); }
-  .card-body { display:none; padding:0 16px 16px; }
-  .speaker-card.open .card-body { display:block; animation:fadeIn 0.2s ease; }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
-
-  .id-readonly {
-    font-family:var(--mono); font-size:12px; color:var(--text-dim);
-    padding:11px 12px; background:var(--surface2); border:1px solid var(--border);
-    border-radius:var(--radius); opacity:0.7;
-  }
-
-  /* Form */
-  .form-grid { display:flex; flex-direction:column; gap:14px; }
-  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .field { display:flex; flex-direction:column; gap:4px; }
-  .field-label {
-    font-size:11px; font-weight:600; color:var(--text-dim);
-    text-transform:uppercase; letter-spacing:0.5px;
-    display:flex; align-items:center; gap:6px;
-  }
-  .field-label .hint { font-weight:400; text-transform:none; letter-spacing:0; font-size:10px; }
-  .field input, .field textarea {
-    font-family:var(--font); font-size:15px; color:var(--text);
-    background:var(--surface2); border:1px solid var(--border);
-    border-radius:var(--radius); padding:11px 12px; outline:none;
-    transition:border-color 0.15s; -webkit-appearance:none;
-  }
-  .field input:focus, .field textarea:focus { border-color:var(--accent); }
-  .field input.mono { font-family:var(--mono); font-size:14px; }
-  .field textarea { resize:vertical; min-height:70px; font-size:14px; }
-
-  /* Password */
-  .pw-wrap { position:relative; display:flex; }
-  .pw-wrap input { flex:1; padding-right:44px; }
-  .pw-toggle {
-    position:absolute; right:8px; top:50%; transform:translateY(-50%);
-    background:none; border:none; color:var(--text-dim); cursor:pointer;
-    font-size:18px; padding:6px; display:flex; align-items:center;
-  }
-  .pw-toggle:active { color:var(--text); }
-
-  /* Tags */
-  .tag-input-wrap {
-    display:flex; flex-wrap:wrap; gap:5px; align-items:center;
-    background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
-    padding:7px; min-height:46px;
-  }
-  .tag-input-wrap:focus-within { border-color:var(--accent); }
-  .tag {
-    display:inline-flex; align-items:center; gap:3px;
-    background:var(--accent-dim); color:var(--accent);
-    padding:4px 9px; border-radius:5px; font-size:13px;
-    font-family:var(--mono);
-  }
-  .tag-remove { cursor:pointer; font-size:16px; line-height:1; opacity:0.6; padding:0 2px; }
-  .tag-remove:active { opacity:1; color:var(--red); }
-  .tag-input {
-    border:none; background:transparent; color:var(--text);
-    font-family:var(--mono); font-size:13px; outline:none;
-    flex:1; min-width:80px; padding:4px 6px;
-  }
-
-  /* Custom Select */
-  .c-select { position:relative; user-select:none; }
-  .c-select-trigger {
-    display:flex; align-items:center; justify-content:space-between;
-    background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius);
-    padding:11px 12px; cursor:pointer; min-height:44px;
-    transition:border-color 0.15s;
-  }
-  .c-select-trigger:active { border-color:var(--accent); }
-  .c-select-arrow { font-size:12px; color:var(--text-dim); }
-
-  /* Bottom Sheet */
-  .sheet-backdrop {
-    position:fixed; inset:0; z-index:50; background:rgba(0,0,0,0.5);
-    opacity:0; pointer-events:none; transition:opacity 0.25s;
-  }
-  .sheet-backdrop.show { opacity:1; pointer-events:auto; }
+  /* ===== SELECT SHEET ===== */
+  .sheet-backdrop { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.25); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
   .sheet-panel {
-    position:fixed; bottom:0; left:0; right:0; z-index:51;
-    background:var(--surface); border-radius:14px 14px 0 0;
-    transform:translateY(100%); transition:transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-    max-height:55vh; display:flex; flex-direction:column;
-    padding-bottom:var(--safe-bottom);
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 51;
+    background: var(--surface); border-radius: 14px 14px 0 0;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    max-height: 55vh; display: flex; flex-direction: column; padding-bottom: var(--safe-bottom);
   }
-  .sheet-panel.show { transform:translateY(0); }
-  .sheet-title {
-    padding:14px 16px 10px; text-align:center;
-    font-size:12px; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px;
-    border-bottom:1px solid var(--border);
-  }
-  .sheet-list { overflow-y:auto; flex:1; -webkit-overflow-scrolling:touch; }
+  .sheet-panel.show { transform: translateY(0); }
+  .sheet-title { padding: 16px; text-align: center; font-size: 12px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1.2px; border-bottom: 1px solid var(--border); }
+  .sheet-list { overflow-y: auto; flex: 1; -webkit-overflow-scrolling: touch; }
   .sheet-option {
-    padding:15px 20px; cursor:pointer; display:flex; align-items:center; gap:10px;
-    border-bottom:1px solid var(--border); font-size:15px;
+    display: block; width: 100%; text-align: left; font-family: var(--font); font-size: 15px;
+    padding: 16px 20px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+    border: none; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text); transition: background 0.15s;
   }
-  .sheet-option:active { background:var(--accent-dim); }
-  .sheet-option.selected { color:var(--accent); font-weight:600; }
-  .sheet-option.selected::after { content:'✓'; margin-left:auto; font-size:14px; }
-  .sheet-cancel {
-    padding:15px; text-align:center; cursor:pointer; font-weight:600;
-    border-top:1px solid var(--border); color:var(--text-dim); font-size:15px;
-  }
-  .sheet-cancel:active { background:var(--surface2); }
+  .sheet-option:active { background: var(--accent-dim); }
+  .sheet-option:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sheet-option.selected { color: var(--accent); font-weight: 600; }
+  .sheet-option.selected::after { content: '✓'; margin-left: auto; font-size: 14px; }
+  .sheet-cancel { display: block; width: 100%; font-family: var(--font); font-size: 15px; padding: 16px; text-align: center; cursor: pointer; font-weight: 600; border: none; border-top: 1px solid var(--border); background: var(--surface); color: var(--text-dim); }
+  .sheet-cancel:active { background: var(--surface2); }
+  .sheet-cancel:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-  /* Bottom bar */
-  .bottom-bar {
-    position:fixed; bottom:0; left:0; right:0; z-index:30;
-    background:rgba(15,15,23,0.9);
-    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
-    border-top:1px solid var(--border);
-    padding:10px 16px calc(10px + var(--safe-bottom));
-    display:flex; gap:10px;
+  /* ===== DEFAULT CONFIG SLAB ===== */
+  .defaults-slab {
+    border: 1px solid var(--accent-dim); border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, rgba(201,98,53,0.04) 0%, transparent 50%);
+    padding: 20px 18px; position: relative; overflow: hidden;
+  }
+  .defaults-slab::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent); border-radius: 0 3px 3px 0; opacity: 0.5;
+  }
+  .defaults-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--accent);
+    background: var(--accent-dim); padding: 4px 10px; border-radius: 3px;
+    border: 1px solid var(--accent-dim);
+  }
+  .defaults-badge::before {
+    content: ''; display: inline-block; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 6px var(--accent-glow);
+  }
+  .cascade-hint {
+    font-size: 11px; color: var(--text-faint); display: flex; align-items: center; gap: 6px;
+    margin-bottom: 16px; line-height: 1.6;
+  }
+  .cascade-hint span { color: var(--accent); font-weight: 600; }
+
+  /* ===== STAGGERED ENTRY ===== */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .stagger { animation: fadeUp 0.4s ease both; }
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+
+  @media (min-width: 600px) {
+    .app { padding: 28px 24px calc(100px + var(--safe-bottom)); }
+    .form-row { grid-template-columns: 1fr 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
-  /* Toast */
-  .toast {
-    position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
-    background:var(--surface2); border:1px solid var(--border);
-    padding:10px 24px; border-radius:20px; font-size:13px;
-    z-index:100; opacity:0; transition:opacity 0.3s;
-    pointer-events:none; white-space:nowrap;
-  }
-  .toast.show { opacity:1; }
-
-  /* Empty state */
-  .empty-state {
-    text-align:center; padding:40px 20px; color:var(--text-dim);
-    border:1px dashed var(--border); border-radius:var(--radius);
-    font-size:14px; line-height:1.8;
-  }
-  .empty-state .btn { margin-top:12px; }
-
-  /* Add account inline */
-  .add-account-section {
-    background:var(--surface); border:1px solid var(--accent-dim); border-radius:12px;
-    padding:20px; margin-bottom:24px;
-  }
-
-  .inherit-toggle {
-    display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-dim);
-    cursor:pointer; padding:4px 0;
-  }
-  .inherit-toggle input { accent-color:var(--accent); }
-  .speaker-add-card:active { border-color:var(--accent); background:var(--accent-subtle); }
-  .speaker-add-card:active .card-header span { color:var(--accent); }
-  .card-section-label {
-    font-size:10px; font-weight:600; text-transform:uppercase;
-    letter-spacing:1.2px; color:var(--accent);
-    padding-bottom:8px; border-bottom:1px solid var(--border);
-    margin-bottom:2px;
-  }
-
-  @media (min-width:600px) {
-    .app { padding:24px 24px calc(90px + var(--safe-bottom)); }
-    .form-row { grid-template-columns:1fr 1fr; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1b1814;
+      --surface: #25211b;
+      --surface2: #2c2822;
+      --border: #3a352e;
+      --border-hover: #544e44;
+      --text: #e8e0d5;
+      --text-dim: #b0a595;
+      --text-faint: #7a7165;
+      --accent: #d47a52;
+      --accent-dim: #2d1f17;
+      --accent-glow: rgba(212,122,82,0.15);
+      --cyan: #5aad96;
+      --red: #d47268;
+      --red-dim: #2d1a18;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.15);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    body::before {
+      background: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px);
+    }
+    .header { background: rgba(27,24,20,0.94); }
+    .bottom-bar { background: rgba(27,24,20,0.94); }
+    .btn-primary { color: #1b1814; }
+    .btn-primary:active { color: #1b1814; }
+    .logo-mark span { background: #1b1814; }
+    .defaults-slab {
+      background: linear-gradient(135deg, rgba(212,122,82,0.08) 0%, transparent 50%);
+    }
   }
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- ====== LOGIN VIEW ====== -->
+
+  <!-- ====== LOGIN ====== -->
   <div id="view-login" class="login-wrap">
     <div class="login-card">
-      <div class="logo" style="margin:0 auto 20px;">M</div>
+      <div class="logo-mark">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
       <h2 id="login-title">登录 MiGPT</h2>
       <div class="form-grid">
         <div class="field">
-          <label class="field-label">用户名</label>
-          <input id="login-user" placeholder="请输入用户名">
+          <label class="field-label" for="login-user">用户名</label>
+          <input id="login-user" placeholder="请输入用户名" autocomplete="username" spellcheck="false">
         </div>
         <div class="field">
-          <label class="field-label">密码</label>
-          <input id="login-pass" type="password" placeholder="请输入密码">
+          <label class="field-label" for="login-pass">密码</label>
+          <input id="login-pass" type="password" placeholder="请输入密码" autocomplete="current-password">
         </div>
         <button class="btn btn-primary" id="login-submit-btn" onclick="doLogin()">登录</button>
       </div>
@@ -346,172 +512,149 @@
     </div>
   </div>
 
-  <!-- ====== MAIN CONFIG VIEW ====== -->
+  <!-- ====== MAIN ====== -->
   <div id="view-main" style="display:none;">
     <!-- Header -->
     <div class="header">
       <div class="header-left">
-        <div class="logo">M</div>
+        <div class="logo-mark">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
         <div>
-          <h1>MiGPT 配置</h1>
+          <h1>MiGPT</h1>
           <sub id="user-label"></sub>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span class="conn-dot" id="conn-dot" title="服务状态"></span>
-        <button class="logout-link" onclick="doLogout()">退出</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="signal-lamp" id="conn-dot" title="信号"></span>
+        <div class="menu-wrap">
+          <button class="menu-trigger" onclick="toggleMenu(event)" aria-label="菜单">···</button>
+          <div class="menu-drop" id="menu-drop" onclick="event.stopPropagation()">
+            <button class="menu-item" onclick="window.open('/logs','_blank');closeMenu()">日志查看</button>
+            <button class="menu-item" onclick="doLogout()">退出登录</button>
+            <button class="menu-item menu-item-danger" onclick="deleteMyAccount()">注销账户</button>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Account Tabs -->
     <div class="account-tabs" id="account-tabs"></div>
 
-    <!-- Config sections (shown when an account is selected) -->
+    <!-- Config Sections -->
     <div id="config-sections" style="display:none;">
-      <!-- Add Account Form -->
-      <div id="add-account-form" style="display:none;" class="add-account-section">
-        <div class="section-header" style="margin-bottom:16px;">
-          <span class="section-title">新增小米账号</span>
+      <!-- Add Account -->
+      <div id="add-account-form" style="display:none;" class="add-acct">
+        <div class="section-head" style="margin-bottom:16px;">
+          <span class="section-label">新增账号</span>
         </div>
         <div class="form-grid">
-          <div class="field">
-            <label class="field-label">userId <span class="hint">小米ID</span></label>
-            <input id="new-userId" class="mono" placeholder="1441226212" inputmode="numeric">
-          </div>
-          <div class="field">
-            <label class="field-label">password</label>
-            <div class="pw-wrap">
-              <input id="new-password" type="password" placeholder="账号密码">
-              <button class="pw-toggle" onclick="togglePwd('new-password', this)" title="显示密码">🙈</button>
+          <div class="field"><label class="field-label" for="new-userId">用户ID <span class="hint">小米ID</span></label><input id="new-userId" class="mono" placeholder="小米ID，不是小米账号" inputmode="numeric" autocomplete="off" spellcheck="false"><a href="https://account.xiaomi.com/" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;margin-top:2px;display:inline-block;">如何获取小米ID →</a></div>
+          <div class="field"><label class="field-label" for="new-password">密码</label><div class="pw-wrap"><input id="new-password" type="password" placeholder="账号密码" autocomplete="new-password"><button class="pw-toggle" onclick="togglePwd('new-password', this)" aria-label="显示密码">&#x1f648;</button></div></div>
+          <div class="field"><label class="field-label" for="new-passToken">通行令牌 <span class="hint">可选</span></label><textarea id="new-passToken" class="mono" placeholder="获取后粘贴至此" rows="3" style="resize:vertical;min-height:48px;font-size:12px;word-break:break-all;"></textarea></div>
+          <div style="display:flex;gap:8px;"><button class="btn btn-primary" onclick="saveNewAccount()">保存</button><button class="btn btn-outline" onclick="cancelAddAccount()">取消</button></div>
+        </div>
+      </div>
+
+      <!-- 1. Account Credentials -->
+      <div class="section stagger stagger-1">
+        <div class="section-head"><span class="section-label">账号凭据</span></div>
+        <div class="form-grid">
+          <div class="field"><label class="field-label" for="s-userId">用户ID <span class="hint">小米ID</span></label><input id="s-userId" class="mono" placeholder="小米ID，不是小米账号" inputmode="numeric" autocomplete="off" spellcheck="false"><a href="https://account.xiaomi.com/" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;margin-top:2px;display:inline-block;">如何获取小米ID →</a></div>
+          <div class="field"><label class="field-label" for="s-password">密码</label><div class="pw-wrap"><input id="s-password" type="password" placeholder="账号密码" autocomplete="current-password"><button class="pw-toggle" id="pw-toggle" onclick="togglePwd('s-password', this)" aria-label="显示密码">&#x1f648;</button></div></div>
+          <div class="field"><label class="field-label" for="s-passToken">通行令牌 <span class="hint">Token 登录（优先）</span></label><textarea id="s-passToken" class="mono" placeholder="留空则使用密码登录" rows="3" style="resize:vertical;min-height:48px;font-size:12px;word-break:break-all;"></textarea></div>
+        </div>
+      </div>
+
+      <!-- 2. Keywords -->
+      <div class="section stagger stagger-2">
+        <div class="section-head"><span class="section-label">唤醒词 & 提示语</span></div>
+        <div class="form-grid">
+          <div class="field"><label class="field-label">进入AI对话</label><div class="tag-input-wrap" data-field="callAIKeywords"></div></div>
+          <div class="field"><label class="field-label">唤醒词</label><div class="tag-input-wrap" data-field="wakeUpKeywords"></div></div>
+          <div class="field"><label class="field-label">退出AI</label><div class="tag-input-wrap" data-field="exitKeywords"></div></div>
+          <div class="field"><label class="field-label">切换音箱</label><div class="tag-input-wrap" data-field="switchSpeakerKeywords"></div></div>
+          <div class="field"><label class="field-label">进入AI欢迎语</label><div class="tag-input-wrap" data-field="onEnterAI"></div></div>
+          <div class="field"><label class="field-label">退出AI提示</label><div class="tag-input-wrap" data-field="onExitAI"></div></div>
+          <div class="field"><label class="field-label">AI思考中</label><div class="tag-input-wrap" data-field="onAIAsking"></div></div>
+          <div class="field"><label class="field-label">AI回复完毕</label><div class="tag-input-wrap" data-field="onAIReplied"></div></div>
+          <div class="field"><label class="field-label">AI出错</label><div class="tag-input-wrap" data-field="onAIError"></div></div>
+        </div>
+      </div>
+
+      <!-- 3. Default Role Presets (from .migpt.js top-level) -->
+      <div class="section stagger stagger-3">
+        <div class="section-head">
+          <span class="section-label">默认配置</span>
+          <span class="defaults-badge">DEFAULT</span>
+        </div>
+        <div class="cascade-hint">以下配置将作为 <span>所有音箱</span> 的默认值，各音箱可单独覆盖</div>
+        <div class="defaults-slab">
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:var(--cyan);box-shadow:0 0 6px rgba(77,158,139,0.35);"></span> AI 角色</div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label">角色名称</label><input id="g-botName" placeholder="给音箱取个好听的名字。如：小美"></div>
+              <div class="field"><label class="field-label">角色简介</label><textarea id="g-botProfile" placeholder="音箱扮演的角色简介"></textarea></div>
             </div>
           </div>
-          <div class="field">
-            <label class="field-label">passToken <span class="hint">可选，留空使用密码登录</span></label>
-            <textarea id="new-passToken" class="mono" placeholder="获取后粘贴至此" rows="4" style="resize:vertical;min-height:48px;font-size:12px;word-break:break-all;"></textarea>
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:var(--accent);box-shadow:0 0 6px rgba(201,98,53,0.35);"></span> 用户角色</div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label">用户名称</label><input id="g-masterName" placeholder="你的名字。如：陆小千"></div>
+              <div class="field"><label class="field-label">用户简介</label><textarea id="g-masterProfile" placeholder="你的个人简介"></textarea></div>
+            </div>
           </div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-primary" onclick="saveNewAccount()">保存</button>
-            <button class="btn btn-outline" onclick="cancelAddAccount()">取消</button>
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:#a090b0;box-shadow:0 0 6px rgba(160,144,176,0.35);"></span> 对话场景</div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label">房间名称</label><input id="g-roomName" placeholder="音箱所在的房间名称"></div>
+              <div class="field"><label class="field-label">房间描述</label><input id="g-roomDescription" placeholder="房间描述。如：客厅里的闲聊，氛围轻松"></div>
+            </div>
+          </div>
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:var(--text-faint);"></span> 系统模板</div>
+            <div class="form-grid">
+              <div class="field"><label class="field-label">系统模板 <span class="hint">自定义系统提示模板，留空使用默认</span></label><textarea id="g-systemTemplate" placeholder="留空使用默认模板" style="min-height:80px;font-family:var(--mono);font-size:12px;"></textarea></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 1. 账号凭据 -->
-      <div class="section">
-        <div class="section-header"><span class="section-title">账号凭据</span></div>
-        <div class="form-grid">
-          <div class="field">
-            <label class="field-label">userId <span class="hint">小米ID</span></label>
-            <input id="s-userId" class="mono" placeholder="1441226212" inputmode="numeric">
-          </div>
-          <div class="field">
-            <label class="field-label">password</label>
-            <div class="pw-wrap">
-              <input id="s-password" type="password" placeholder="账号密码">
-              <button class="pw-toggle" id="pw-toggle" onclick="togglePwd('s-password', this)" title="显示密码">🙈</button>
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">passToken <span class="hint">Token 登录（优先）</span></label>
-            <textarea id="s-passToken" class="mono" placeholder="留空则使用密码登录" rows="4" style="resize:vertical;min-height:48px;font-size:12px;word-break:break-all;"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. 唤醒词 & 提示语 -->
-      <div class="section">
-        <div class="section-header"><span class="section-title">唤醒词 & 提示语</span></div>
-        <div class="form-grid">
-          <div class="field"><label class="field-label">callAIKeywords <span class="hint">进入AI对话</span></label><div class="tag-input-wrap" data-field="callAIKeywords"></div></div>
-          <div class="field"><label class="field-label">wakeUpKeywords <span class="hint">唤醒词</span></label><div class="tag-input-wrap" data-field="wakeUpKeywords"></div></div>
-          <div class="field"><label class="field-label">exitKeywords <span class="hint">退出AI</span></label><div class="tag-input-wrap" data-field="exitKeywords"></div></div>
-          <div class="field"><label class="field-label">switchSpeakerKeywords <span class="hint">切换音箱</span></label><div class="tag-input-wrap" data-field="switchSpeakerKeywords"></div></div>
-          <div class="field"><label class="field-label">onEnterAI <span class="hint">进入AI欢迎语</span></label><div class="tag-input-wrap" data-field="onEnterAI"></div></div>
-          <div class="field"><label class="field-label">onExitAI <span class="hint">退出AI</span></label><div class="tag-input-wrap" data-field="onExitAI"></div></div>
-          <div class="field"><label class="field-label">onAIAsking <span class="hint">AI思考中</span></label><div class="tag-input-wrap" data-field="onAIAsking"></div></div>
-          <div class="field"><label class="field-label">onAIReplied <span class="hint">AI回复完毕</span></label><div class="tag-input-wrap" data-field="onAIReplied"></div></div>
-          <div class="field"><label class="field-label">onAIError <span class="hint">AI出错</span></label><div class="tag-input-wrap" data-field="onAIError"></div></div>
-        </div>
-      </div>
-
-      <!-- 3. 全局默认角色 -->
-      <div class="section">
-        <div class="section-header">
-          <span class="section-title">全局默认角色</span>
-          <span style="font-size:10px;color:var(--text-dim);">所有音箱的默认值，各音箱可单独覆盖</span>
-        </div>
-        <div class="form-grid">
-          <div class="form-row">
-            <div class="field">
-              <label class="field-label">bot.name <span class="hint">角色名</span></label>
-              <input id="g-botName" placeholder="给音箱取个好听的名字。如：小美、马维斯、Moss">
-            </div>
-            <div class="field">
-              <label class="field-label">room.name <span class="hint">房间名</span></label>
-              <input id="g-roomName" placeholder="音箱所在的房间名称。如：卧室、设计办公室、客厅">
-            </div>
-          </div>
-          <div class="field">
-            <label class="field-label">bot.profile <span class="hint">角色简介</span></label>
-            <textarea id="g-botProfile" placeholder="音箱扮演的角色。如：负责家庭事务提醒，回答简洁稳重。"></textarea>
-          </div>
-          <div class="field">
-            <label class="field-label">room.description <span class="hint">房间描述，在 prompt 中作为对话场景上下文</span></label>
-            <input id="g-roomDescription" placeholder="房间描述。如：客厅里的闲聊，氛围轻松">
-          </div>
-          <div class="field">
-            <label class="field-label">systemTemplate <span class="hint">自定义系统提示模板，留空使用默认</span></label>
-            <textarea id="g-systemTemplate" placeholder="留空使用默认模板" style="min-height:80px;font-family:var(--mono);font-size:12px;"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. 音箱列表 -->
-      <div class="section">
-        <div class="section-header">
-          <span class="section-title">音箱列表</span>
-          <span class="section-count" id="speaker-count">0</span>
+      <!-- 4. Speaker List -->
+      <div class="section stagger stagger-4">
+        <div class="section-head">
+          <span class="section-label">音箱列表</span>
+          <span class="section-badge" id="speaker-count">0</span>
         </div>
         <div id="speakers-container"></div>
-        <div class="speaker-card speaker-add-card" onclick="addSpeaker()" style="border-style:dashed; border-color:var(--border); cursor:pointer;">
-          <div class="card-header" style="justify-content:center; padding:18px 16px;">
-            <div class="card-header-left" style="flex:none; align-items:center; gap:10px;">
-              <span style="font-size:20px; color:var(--text-dim);">+</span>
-              <span style="font-size:15px; font-weight:500; color:var(--text-dim);">添加音箱</span>
-            </div>
-          </div>
-        </div>
+        <button class="speaker-add" onclick="addSpeaker()">+ 添加音箱</button>
       </div>
     </div>
 
-    <!-- Empty state: no accounts -->
-    <div id="no-accounts" style="display:none;">
-      <div class="empty-state">
-        暂无小米账号<br>
-        <button class="btn btn-primary" onclick="showAddAccount()" style="margin-top:16px;">+ 添加小米账号</button>
-      </div>
+    <!-- No accounts -->
+    <div id="no-accounts" style="display:none;" class="stagger stagger-1">
+      <div class="empty">暂无小米账号<br><button class="btn btn-primary" onclick="showAddAccount()" style="margin-top:16px;">+ 添加小米账号</button></div>
     </div>
 
-    <!-- Delete account -->
-    <div style="margin-top:32px;padding-top:20px;border-top:1px solid var(--border);text-align:center;" id="delete-zone" hidden>
-      <button class="btn btn-danger btn-sm" onclick="deleteCurrentAccount()">删除当前账号</button>
-    </div>
     <div style="height:20px;"></div>
   </div>
 </div>
 
 <div class="bottom-bar" id="bottom-bar" style="display:none;">
-  <button class="btn btn-primary" onclick="saveAndRestart()" style="flex:1; font-size:15px;">保存并重启</button>
+  <button class="btn btn-primary" id="save-btn" onclick="save()">保存</button>
+  <button class="btn btn-primary" id="restart-btn" onclick="restart()">重启</button>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" aria-live="polite"></div>
 
 <!-- Bottom Sheet -->
 <div class="sheet-backdrop" id="sheet-backdrop" onclick="closeSheet()"></div>
 <div class="sheet-panel" id="sheet-panel">
   <div class="sheet-title" id="sheet-title"></div>
   <div class="sheet-list" id="sheet-list"></div>
-  <div class="sheet-cancel" onclick="closeSheet()">取消</div>
+  <button class="sheet-cancel" onclick="closeSheet()">取消</button>
+</div>
+
 </div>
 
 <script>
@@ -520,13 +663,13 @@ let token = localStorage.getItem("mi_gpt_token") || "";
 let loginMode = 'login';
 let accounts = [];
 let currentAccountId = "";
-let shared = {};   // { userId, password, passToken, callAIKeywords[], ... }
-let speakers = []; // [{ id, did, model, modelName, ttsCommand, wakeUpCommand, tts, streamResponse, bot, room, systemTemplate }]
-let globalRole = { botName: '', botProfile: '', roomName: '', roomDescription: '', systemTemplate: '' };
+let shared = {};
+let speakers = [];
+let globalRole = { botName:'', botProfile:'', masterName:'', masterProfile:'', roomName:'', roomDescription:'', systemTemplate:'' };
 
 // ---- Helpers ----
 function $(id) { return document.getElementById(id); }
-function qsa(sel, el) { return (el||document).querySelectorAll(sel); }
+function qsa(sel,el) { return (el||document).querySelectorAll(sel); }
 const API = window.location.origin;
 
 async function api(method, path, body) {
@@ -555,15 +698,15 @@ async function checkConnection() {
   const dot = $('conn-dot');
   try {
     const r = await fetch(`${API}/ping`, { signal: AbortSignal.timeout(3000) });
-    dot.className = r.ok ? 'conn-dot online' : 'conn-dot';
-  } catch (_) { dot.className = 'conn-dot'; }
+    dot.className = r.ok ? 'signal-lamp live' : 'signal-lamp';
+  } catch (_) { dot.className = 'signal-lamp'; }
 }
 
 // ---- View switching ----
 function showView(view) {
   $('view-login').style.display = view === 'login' ? '' : 'none';
   $('view-main').style.display = view === 'main' ? '' : 'none';
-  $('bottom-bar').style.display = view === 'main' && currentAccountId ? '' : 'none';
+  $('bottom-bar').style.display = view === 'main' ? '' : 'none';
 }
 
 // ---- Login ----
@@ -579,6 +722,8 @@ async function doLogin() {
   const u = $('login-user').value.trim();
   const p = $('login-pass').value;
   if (!u || !p) { showToast('请输入用户名和密码'); return; }
+  const btn = $('login-submit-btn');
+  btn.classList.add('loading');
   const path = loginMode === 'login' ? '/api/auth/login' : '/api/auth/register';
   try {
     const r = await fetch(`${API}${path}`, {
@@ -588,15 +733,17 @@ async function doLogin() {
       signal: AbortSignal.timeout(5000),
     });
     const data = await r.json();
-    if (!r.ok) { showToast(data.error || '操作失败'); return; }
+    if (!r.ok) { btn.classList.remove('loading'); showToast(data.error || '操作失败'); return; }
     token = data.token;
     localStorage.setItem("mi_gpt_token", token);
     $('user-label').textContent = u;
     showView('main');
     await loadAll();
+    refreshStatus();
+    statusTimer = setInterval(refreshStatus, 5000);
     checkConnection();
     setInterval(checkConnection, 8000);
-  } catch (e) { showToast('连接失败，请确认服务已启动'); }
+  } catch (e) { btn.classList.remove('loading'); showToast('连接失败，请确认服务已启动'); }
 }
 
 function doLogout() {
@@ -608,6 +755,25 @@ function doLogout() {
   showView('login');
 }
 
+async function deleteMyAccount() {
+  if (!confirm('确定注销你的账户吗？所有小米账号、音箱配置和相关数据将被永久删除，不可恢复。')) return;
+  try {
+    const r = await api('DELETE', '/api/auth/me');
+    if (r.ok) { showToast('账户已注销'); doLogout(); }
+    else showToast('注销失败');
+  } catch (_) { showToast('连接失败'); }
+}
+
+// ---- Header Menu ----
+function toggleMenu(e) {
+  e.stopPropagation();
+  $('menu-drop').classList.toggle('show');
+}
+function closeMenu() {
+  $('menu-drop').classList.remove('show');
+}
+document.addEventListener('click', () => closeMenu());
+
 // ---- Load all config ----
 async function loadAll() {
   try {
@@ -617,18 +783,39 @@ async function loadAll() {
     renderAccountTabs();
 
     if (accounts.length > 0) {
-      // Select first account by default, or keep current if still valid
       if (!currentAccountId || !accounts.find(a => a.id === currentAccountId)) {
         selectAccount(accounts[0].id);
       } else {
         selectAccount(currentAccountId);
       }
     } else {
+      // 新用户：直接展示完整配置页，角色默认值从 .migpt.js 预填充
       currentAccountId = "";
-      $('config-sections').style.display = 'none';
-      $('no-accounts').style.display = '';
-      $('bottom-bar').style.display = 'none';
-      $('delete-zone').hidden = true;
+      $('config-sections').style.display = '';
+      $('no-accounts').style.display = 'none';
+      $('bottom-bar').style.display = '';
+      shared = { userId:'', password:'', passToken:'', callAIKeywords:[],wakeUpKeywords:[],exitKeywords:[], switchSpeakerKeywords:[],onEnterAI:[],onExitAI:[], onAIAsking:[],onAIReplied:[],onAIError:[], };
+      speakers = [];
+      try {
+        const r = await fetch(`${API}/api/defaults`, { signal: AbortSignal.timeout(5000) });
+        if (r.ok) {
+          const defaults = await r.json();
+          if (defaults.botName || defaults.botProfile || defaults.masterName || defaults.masterProfile) {
+            globalRole = {
+              botName: defaults.botName || '', botProfile: defaults.botProfile || '',
+              masterName: defaults.masterName || '', masterProfile: defaults.masterProfile || '',
+              roomName: defaults.roomName || '', roomDescription: defaults.roomDescription || '',
+              systemTemplate: defaults.systemTemplate || '',
+            };
+          }
+          // 关键词也从 .migpt.js 预填充
+          const kwKeys = ['callAIKeywords','wakeUpKeywords','exitKeywords','switchSpeakerKeywords','onEnterAI','onExitAI','onAIAsking','onAIReplied','onAIError'];
+          for (const k of kwKeys) {
+            if (defaults[k]?.length) shared[k] = defaults[k];
+          }
+        }
+      } catch (_) {}
+      syncUI();
     }
   } catch (_) {}
 }
@@ -637,79 +824,96 @@ async function loadAll() {
 function renderAccountTabs() {
   const container = $('account-tabs');
   let html = '';
-  accounts.forEach((a, i) => {
+  accounts.forEach((a) => {
     const active = a.id === currentAccountId ? ' active' : '';
     html += `<div class="account-tab${active}" data-account="${a.id}" onclick="selectAccount('${a.id}')">
-      <span class="tab-dot ${a.status === 'running' ? 'running' : 'stopped'}"></span>
+      <span class="tab-lamp ${a.status === 'running' ? 'on' : 'off'}"></span>
       ${esc(a.userId)}
     </div>`;
   });
   container.innerHTML = html;
 }
 
-function selectAccount(accountId) {
+async function selectAccount(accountId) {
   currentAccountId = accountId;
   const account = accounts.find(a => a.id === accountId);
   if (!account) return;
 
-  // Update tab styles
   qsa('.account-tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.account === accountId);
   });
 
-  // Show config sections
   $('add-account-form').style.display = 'none';
   $('config-sections').style.display = '';
   $('no-accounts').style.display = 'none';
   $('bottom-bar').style.display = '';
-  $('delete-zone').hidden = false;
 
-  // Fill account creds
   shared = {
-    userId: account.userId || '',
-    password: account.password || '',
-    passToken: account.passToken || '',
-    callAIKeywords: [], wakeUpKeywords: [], exitKeywords: [],
-    switchSpeakerKeywords: [], onEnterAI: [], onExitAI: [],
-    onAIAsking: [], onAIReplied: [], onAIError: [],
+    userId:account.userId||'', password:account.password||'', passToken:account.passToken||'',
+    callAIKeywords:[],wakeUpKeywords:[],exitKeywords:[],
+    switchSpeakerKeywords:[],onEnterAI:[],onExitAI:[],
+    onAIAsking:[],onAIReplied:[],onAIError:[],
   };
   try {
     const defaults = JSON.parse(account.speakerDefaults || '{}');
     for (const k of Object.keys(shared)) {
       if (defaults[k]?.length) shared[k] = defaults[k];
     }
+    globalRole = {
+      botName: defaults.botName || '',
+      botProfile: defaults.botProfile || '',
+      masterName: defaults.masterName || '',
+      masterProfile: defaults.masterProfile || '',
+      roomName: defaults.roomName || '',
+      roomDescription: defaults.roomDescription || '',
+      systemTemplate: defaults.systemTemplate || '',
+    };
   } catch (_) {}
 
-  // Map speakers
+  // 如果角色默认为空，从 .migpt.js 预填充
+  const roleEmpty = !globalRole.botName && !globalRole.botProfile && !globalRole.masterName && !globalRole.masterProfile && !globalRole.roomName && !globalRole.roomDescription && !globalRole.systemTemplate;
+  const kwEmpty = !shared.callAIKeywords?.length && !shared.wakeUpKeywords?.length && !shared.exitKeywords?.length;
+  if (roleEmpty || kwEmpty) {
+    try {
+      const r = await fetch(`${API}/api/defaults`, { signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        const defaults = await r.json();
+        if (roleEmpty && (defaults.botName || defaults.botProfile || defaults.masterName || defaults.masterProfile)) {
+          globalRole = {
+            botName: defaults.botName || '',
+            botProfile: defaults.botProfile || '',
+            masterName: defaults.masterName || '',
+            masterProfile: defaults.masterProfile || '',
+            roomName: defaults.roomName || '',
+            roomDescription: defaults.roomDescription || '',
+            systemTemplate: defaults.systemTemplate || '',
+          };
+        }
+        if (kwEmpty) {
+          const kwKeys = ['callAIKeywords','wakeUpKeywords','exitKeywords','switchSpeakerKeywords','onEnterAI','onExitAI','onAIAsking','onAIReplied','onAIError'];
+          for (const k of kwKeys) {
+            if (defaults[k]?.length) shared[k] = defaults[k];
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   speakers = (account.speakers || []).map(s => {
     let cfg = {};
     try { cfg = JSON.parse(s.config || '{}'); } catch (_) {}
     return {
-      id: s.id,
-      did: s.did || '',
-      model: s.model || '',
-      modelName: s.modelName || '',
-      ttsCommand: cfg.ttsCommand || [5,1],
-      wakeUpCommand: cfg.wakeUpCommand || [5,3],
-      tts: cfg.tts || 'xiaoai',
-      streamResponse: cfg.streamResponse ?? false,
-      bot: { name: cfg.botName || '', profile: cfg.botProfile || '' },
-      room: { name: cfg.roomName || '', description: cfg.roomDescription || '' },
-      systemTemplate: cfg.systemTemplate || '',
+      id:s.id, did:s.did||'', model:s.model||'', modelName:s.modelName||'',
+      ttsCommand:cfg.ttsCommand||[5,1], wakeUpCommand:cfg.wakeUpCommand||[5,3],
+      tts:cfg.tts||'xiaoai', streamResponse:cfg.streamResponse??false,
+      bot:{name:cfg.botName||'',profile:cfg.botProfile||''},
+      master:{name:cfg.masterName||'',profile:cfg.masterProfile||''},
+      room:{name:cfg.roomName||'',description:cfg.roomDescription||''},
+      systemTemplate:cfg.systemTemplate||'',
     };
   });
-
-  // Global role from first speaker
-  const first = speakers[0];
-  globalRole = {
-    botName: first?.bot?.name || '',
-    botProfile: first?.bot?.profile || '',
-    roomName: first?.room?.name || '',
-    roomDescription: first?.room?.description || '',
-    systemTemplate: first?.systemTemplate || '',
-  };
-
   syncUI();
+  clearDirty();
 }
 
 // ---- Add Account ----
@@ -723,10 +927,7 @@ function showAddAccount() {
   toggles.forEach(t => t.textContent = '🙈');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
-
-function cancelAddAccount() {
-  $('add-account-form').style.display = 'none';
-}
+function cancelAddAccount() { $('add-account-form').style.display = 'none'; }
 
 async function saveNewAccount() {
   const userId = $('new-userId').value.trim();
@@ -734,18 +935,9 @@ async function saveNewAccount() {
   const passToken = $('new-passToken').value.trim();
   if (!userId) { showToast('请输入 userId'); return; }
   try {
-    const r = await api('POST', '/api/accounts', {
-      userId, password, passToken,
-      speakerDefaults: {},
-    });
-    if (r.ok) {
-      showToast('账号已添加');
-      cancelAddAccount();
-      await loadAll();
-    } else {
-      const d = await r.json();
-      showToast(d.error || '添加失败');
-    }
+    const r = await api('POST', '/api/accounts', { userId, password, passToken, speakerDefaults: {} });
+    if (r.ok) { showToast('账号已添加'); cancelAddAccount(); await loadAll(); }
+    else { const d = await r.json(); showToast(d.error || '添加失败'); }
   } catch (_) { showToast('连接失败'); }
 }
 
@@ -756,13 +948,8 @@ async function deleteCurrentAccount() {
   if (!confirm(`确定删除小米账号「${label}」及其所有音箱配置吗？此操作不可恢复。`)) return;
   try {
     const r = await api('DELETE', `/api/accounts/${currentAccountId}`);
-    if (r.ok) {
-      showToast('账号已删除');
-      currentAccountId = "";
-      await loadAll();
-    } else {
-      showToast('删除失败');
-    }
+    if (r.ok) { showToast('账号已删除'); currentAccountId = ""; await loadAll(); }
+    else showToast('删除失败');
   } catch (_) { showToast('连接失败'); }
 }
 
@@ -775,9 +962,10 @@ function syncUI() {
   const pt = $('pw-toggle');
   if (pt) pt.textContent = '🙈';
 
-  // Global role
   $('g-botName').value = globalRole.botName || '';
   $('g-botProfile').value = globalRole.botProfile || '';
+  $('g-masterName').value = globalRole.masterName || '';
+  $('g-masterProfile').value = globalRole.masterProfile || '';
   $('g-roomName').value = globalRole.roomName || '';
   $('g-roomDescription').value = globalRole.roomDescription || '';
   $('g-systemTemplate').value = globalRole.systemTemplate || '';
@@ -795,13 +983,12 @@ function initTagInputs() {
     vals.forEach(v => { if (v) addTag(wrap, v); });
     const input = document.createElement('input');
     input.className = 'tag-input';
-    input.placeholder = vals.length ? '' : '输入后回车';
+    input.placeholder = '输入后回车';
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter' && input.value.trim()) {
         e.preventDefault();
         addTag(wrap, input.value.trim());
         input.value = '';
-        input.placeholder = '';
         syncTags(wrap);
       }
       if (e.key === 'Backspace' && !input.value && wrap.querySelectorAll('.tag').length) {
@@ -818,8 +1005,9 @@ function addTag(wrap, text) {
   const tag = document.createElement('span');
   tag.className = 'tag';
   tag.textContent = text;
-  const rm = document.createElement('span');
+  const rm = document.createElement('button');
   rm.className = 'tag-remove';
+  rm.setAttribute('aria-label', '移除标签');
   rm.textContent = '×';
   rm.addEventListener('click', e => { e.stopPropagation(); tag.remove(); syncTags(wrap); });
   tag.appendChild(rm);
@@ -838,9 +1026,10 @@ function collectShared() {
   shared.passToken = $('s-passToken').value;
   qsa('.tag-input-wrap').forEach(w => syncTags(w));
 
-  // Global role
   globalRole.botName = $('g-botName').value.trim();
   globalRole.botProfile = $('g-botProfile').value.trim();
+  globalRole.masterName = $('g-masterName').value.trim();
+  globalRole.masterProfile = $('g-masterProfile').value.trim();
   globalRole.roomName = $('g-roomName').value.trim();
   globalRole.roomDescription = $('g-roomDescription').value.trim();
   globalRole.systemTemplate = $('g-systemTemplate').value.trim();
@@ -851,19 +1040,15 @@ function initCustomSelects() {
   qsa('.c-select').forEach(el => el.remove());
   qsa('select[data-speaker]').forEach(nativeSelect => {
     const wrap = document.createElement('div');
-    wrap.className = 'c-select';
-    wrap.setAttribute('data-speaker', nativeSelect.dataset.speaker);
-    wrap.setAttribute('data-key', nativeSelect.dataset.key);
+    wrap.className = 'c-select'; wrap.setAttribute('data-speaker', nativeSelect.dataset.speaker); wrap.setAttribute('data-key', nativeSelect.dataset.key);
     nativeSelect.style.display = 'none';
     nativeSelect.parentNode.insertBefore(wrap, nativeSelect);
     const trigger = document.createElement('div');
     trigger.className = 'c-select-trigger';
+    trigger.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:11px 12px;cursor:pointer;min-height:44px;transition:border-color 0.15s;';
     const selOpt = nativeSelect.options[nativeSelect.selectedIndex];
-    trigger.innerHTML = `<span class="c-select-text">${selOpt ? selOpt.text : ''}</span><span class="c-select-arrow">▾</span>`;
-    trigger.addEventListener('click', () => {
-      _activeSelect = nativeSelect;
-      openSheet(nativeSelect, trigger);
-    });
+    trigger.innerHTML = `<span style="font-size:14px;">${selOpt?selOpt.text:''}</span><span style="font-size:12px;color:var(--text-faint);">▾</span>`;
+    trigger.addEventListener('click', () => { _activeSelect = nativeSelect; openSheet(nativeSelect, trigger); });
     wrap.appendChild(trigger);
   });
 }
@@ -876,16 +1061,16 @@ function openSheet(nativeSelect, trigger) {
   const list = $('sheet-list');
   list.innerHTML = '';
   [...nativeSelect.options].forEach(opt => {
-    const div = document.createElement('div');
-    div.className = 'sheet-option' + (opt.selected ? ' selected' : '');
-    div.textContent = opt.text;
-    div.addEventListener('click', () => {
+    const btn = document.createElement('button');
+    btn.className = 'sheet-option' + (opt.selected ? ' selected' : '');
+    btn.textContent = opt.text;
+    btn.addEventListener('click', () => {
       nativeSelect.value = opt.value;
       nativeSelect.dispatchEvent(new Event('change'));
-      trigger.querySelector('.c-select-text').textContent = opt.text;
+      trigger.querySelector('span').textContent = opt.text;
       closeSheet();
     });
-    list.appendChild(div);
+    list.appendChild(btn);
   });
   $('sheet-backdrop').classList.add('show');
   $('sheet-panel').classList.add('show');
@@ -900,87 +1085,84 @@ function closeSheet() {
 // ---- Speaker Card ----
 function buildSpeakerCard(sp, index) {
   const div = document.createElement('div');
-  div.className = 'speaker-card open';
+  div.className = 'speaker-card expanded';
   div.dataset.index = index;
+  div.style.position = 'relative';
 
-  const inheritRole = !sp.bot?.name && !sp.bot?.profile && !sp.room?.name && !sp.room?.description && !sp.systemTemplate;
-  const subtitle = [sp.modelName, sp.did].filter(Boolean).join(' · ') || '未配置 DID';
-
+  const inheritRole = !sp.bot?.name && !sp.bot?.profile && !sp.master?.name && !sp.master?.profile && !sp.room?.name && !sp.room?.description && !sp.systemTemplate;
+  const subtitle = sp.modelName || '未配置 DID';
   div.innerHTML = `
-    <div class="card-header" onclick="this.parentElement.classList.toggle('open')">
+    <div class="card-header" role="button" tabindex="0" aria-expanded="true" onclick="this.parentElement.classList.toggle('expanded');this.setAttribute('aria-expanded',this.parentElement.classList.contains('expanded'))" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}">
       <div class="card-header-left">
-        <span class="card-index">${String(index + 1).padStart(2, '0')}</span>
+        <span class="speaker-status-dot" title="加载中..."></span>
+        <span class="card-seq">${String(index+1).padStart(2,'0')}</span>
         <div style="min-width:0;">
-          <div class="card-title">${esc(sp.bot?.name || sp.did || '未命名')}</div>
+          <div class="card-title">${esc(sp.did || sp.modelName || '未命名音箱')}</div>
           <div class="card-subtitle">${esc(subtitle)}</div>
+          <div class="speaker-last-seen"></div>
         </div>
       </div>
       <div class="card-header-right">
-        <span class="card-chevron">▶</span>
+        <span class="card-arrow">▶</span>
       </div>
     </div>
     <div class="card-body">
       <div class="form-grid">
-        <!-- 设备信息 -->
-        <div class="card-section-label">设备信息</div>
+        <div class="card-divider">设备信息</div>
         <div class="field">
-          <label class="field-label">音箱名称</label>
-          <input data-speaker="${index}" data-key="did" class="mono" placeholder="音箱在米家app中的名称" value="${esc(sp.did || '')}">
+          <label class="field-label">音箱名称 <span class="hint">DID</span></label>
+          <input data-speaker="${index}" data-key="did" class="mono" placeholder="音箱在米家app中的名称" value="${esc(sp.did||'')}">
         </div>
         <div class="form-row">
           <div class="field">
-            <label class="field-label">model</label>
+            <label class="field-label">型号</label>
             <select data-speaker="${index}" data-key="model" onchange="onModelChange(${index})" style="display:none">
               <option value="">请选择型号</option>
-              ${Object.entries(MODEL_DATA).map(([k, v]) => `<option value="${k}" ${sp.model === k ? 'selected' : ''}>${k} — ${v.name}</option>`).join('')}
+              ${Object.entries(MODEL_DATA).map(([k,v]) => `<option value="${k}" ${sp.model===k?'selected':''}>${k} — ${v.name}</option>`).join('')}
             </select>
-            <input type="hidden" data-speaker="${index}" data-key="modelName" value="${esc(sp.modelName || '')}">
+            <input type="hidden" data-speaker="${index}" data-key="modelName" value="${esc(sp.modelName||'')}">
           </div>
           <div class="field">
-            <label class="field-label">tts</label>
+            <label class="field-label">语音引擎</label>
             <select data-speaker="${index}" data-key="tts" style="display:none">
-              <option value="xiaoai" ${sp.tts === 'xiaoai' ? 'selected' : ''}>xiaoai</option>
-              <option value="custom" ${sp.tts === 'custom' ? 'selected' : ''}>custom</option>
+              <option value="xiaoai" ${sp.tts==='xiaoai'?'selected':''}>xiaoai</option>
+              <option value="custom" ${sp.tts==='custom'?'selected':''}>custom</option>
             </select>
           </div>
         </div>
-        <input type="hidden" data-speaker="${index}" data-key="ttsCommand" value="${(sp.ttsCommand || []).join(',')}">
-        <input type="hidden" data-speaker="${index}" data-key="wakeUpCommand" value="${(sp.wakeUpCommand || []).join(',')}">
-        <input type="hidden" data-speaker="${index}" data-key="streamResponse" value="${sp.streamResponse ? 'true' : 'false'}">
+        <input type="hidden" data-speaker="${index}" data-key="ttsCommand" value="${(sp.ttsCommand||[]).join(',')}">
+        <input type="hidden" data-speaker="${index}" data-key="wakeUpCommand" value="${(sp.wakeUpCommand||[]).join(',')}">
+        <input type="hidden" data-speaker="${index}" data-key="streamResponse" value="${sp.streamResponse?'true':'false'}">
 
-        <!-- 角色设置 -->
-        <div class="card-section-label" style="margin-top:6px;">角色设置</div>
-        <label class="inherit-toggle">
-          <input type="checkbox" data-speaker="${index}" data-key="inheritRole" ${inheritRole ? 'checked' : ''} onchange="toggleRoleOverride(${index})">
-          继承全局默认角色
+        <div class="card-divider" style="margin-top:6px;">角色设置</div>
+        <label class="inherit-row">
+          <input type="checkbox" data-speaker="${index}" data-key="inheritRole" ${inheritRole?'checked':''} onchange="toggleRoleOverride(${index})">
+          继承全局默认配置
         </label>
-        <div class="role-override" data-speaker="${index}" style="display:${inheritRole ? 'none' : ''};">
-          <div class="field">
-              <label class="field-label">bot.name <span class="hint">角色名称</span></label>
-              <input data-speaker="${index}" data-key="botName" placeholder="给音箱取个好听的名字。如：小美、马维斯、Moss" value="${esc(sp.bot?.name || '')}">
-            </div>
-             <div class="field">
-              <label class="field-label">bot.profile <span class="hint">角色简介</span></label>
-              <textarea data-speaker="${index}" data-key="botProfile" placeholder="音箱扮演的角色。如：负责家庭事务提醒，回答简洁稳重。">${esc(sp.bot?.profile || '')}</textarea>
-            </div>
-
-       <div class="field">
-              <label class="field-label">room.name <span class="hint">房间名</span></label>
-              <input data-speaker="${index}" data-key="roomName" placeholder="音箱所在的房间名称。如：卧室、设计办公室、客厅" value="${esc(sp.room?.name || '')}">
-            </div>
-          <div class="field">
-            <label class="field-label">room.description <span class="hint">房间描述</span></label>
-            <input data-speaker="${index}" data-key="roomDescription" placeholder="房间描述。如：客厅里的闲聊，氛围轻松" value="${esc(sp.room?.description || '')}">
+        <div class="role-override" data-speaker="${index}" style="display:${inheritRole?'none':''};">
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:var(--cyan);"></span> AI 角色</div>
+            <div class="field"><label class="field-label">角色名称</label><input data-speaker="${index}" data-key="botName" placeholder="给音箱取个好听的名字" value="${esc(sp.bot?.name||'')}"></div>
+            <div class="field"><label class="field-label">角色简介</label><textarea data-speaker="${index}" data-key="botProfile" placeholder="音箱扮演的角色">${esc(sp.bot?.profile||'')}</textarea></div>
           </div>
-
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:var(--accent);"></span> 用户角色</div>
+            <div class="field"><label class="field-label">用户名称</label><input data-speaker="${index}" data-key="masterName" placeholder="你的名字" value="${esc(sp.master?.name||'')}"></div>
+            <div class="field"><label class="field-label">用户简介</label><textarea data-speaker="${index}" data-key="masterProfile" placeholder="你的个人简介">${esc(sp.master?.profile||'')}</textarea></div>
+          </div>
+          <div class="role-group">
+            <div class="role-group-title"><span class="role-dot" style="background:#a090b0;"></span> 对话场景</div>
+            <div class="field"><label class="field-label">房间名称</label><input data-speaker="${index}" data-key="roomName" placeholder="音箱所在的房间" value="${esc(sp.room?.name||'')}"></div>
+            <div class="field"><label class="field-label">房间描述</label><input data-speaker="${index}" data-key="roomDescription" placeholder="房间描述" value="${esc(sp.room?.description||'')}"></div>
+          </div>
           <div class="field">
-            <label class="field-label">systemTemplate <span class="hint">自定义系统提示模板</span></label>
-            <textarea data-speaker="${index}" data-key="systemTemplate" placeholder="自定义系统提示模板，留空使用默认" style="min-height:80px;font-family:var(--mono);font-size:12px;">${esc(sp.systemTemplate || '')}</textarea>
+            <label class="field-label">系统模板 <span class="hint">自定义系统提示模板</span></label>
+            <textarea data-speaker="${index}" data-key="systemTemplate" placeholder="自定义系统提示模板，留空使用默认" style="min-height:80px;font-family:var(--mono);font-size:12px;">${esc(sp.systemTemplate||'')}</textarea>
           </div>
         </div>
       </div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);text-align:right;">
-        <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();removeSpeaker(${index})">删除此音箱</button>
+        <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();removeSpeaker(${index})">删除此音箱</button>
       </div>
     </div>`;
   return div;
@@ -1019,53 +1201,40 @@ function collectSpeaker(index) {
   const sp = { ...speakers[index] };
   qsa(`[data-speaker="${index}"]`).forEach(el => {
     const key = el.dataset.key;
-    if (key === 'inheritRole') return; // skip checkbox
+    if (key === 'inheritRole') return;
     let val;
-    if (el.tagName === 'SELECT') {
-      val = el.value;
-    } else if (key === 'streamResponse') {
-      val = el.value === 'true';
-    } else if (key === 'ttsCommand' || key === 'wakeUpCommand') {
-      val = el.value.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-    } else {
-      val = el.value;
-    }
+    if (el.tagName === 'SELECT') { val = el.value; }
+    else if (key === 'streamResponse') { val = el.value === 'true'; }
+    else if (key === 'ttsCommand' || key === 'wakeUpCommand') { val = el.value.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)); }
+    else { val = el.value; }
     if (key === 'botName') { sp.bot = { ...sp.bot, name: val }; }
     else if (key === 'botProfile') { sp.bot = { ...sp.bot, profile: val }; }
+    else if (key === 'masterName') { sp.master = { ...sp.master, name: val }; }
+    else if (key === 'masterProfile') { sp.master = { ...sp.master, profile: val }; }
     else if (key === 'roomName') { sp.room = { ...sp.room, name: val }; }
     else if (key === 'roomDescription') { sp.room = { ...sp.room, description: val }; }
     else if (key === 'systemTemplate') { sp.systemTemplate = val; }
     else { sp[key] = val; }
   });
 
-  // If inheritRole is checked, apply global role to this speaker
   const inheritCb = document.querySelector(`input[type="checkbox"][data-speaker="${index}"][data-key="inheritRole"]`);
   if (inheritCb && inheritCb.checked) {
     sp.bot = { name: globalRole.botName, profile: globalRole.botProfile };
+    sp.master = { name: globalRole.masterName, profile: globalRole.masterProfile };
     sp.room = { name: globalRole.roomName, description: globalRole.roomDescription };
     sp.systemTemplate = globalRole.systemTemplate;
   }
-
   return sp;
 }
 
-function syncAllSpeakers() {
-  speakers = speakers.map((_, i) => collectSpeaker(i));
-}
+function syncAllSpeakers() { speakers = speakers.map((_,i) => collectSpeaker(i)); }
 
 function addSpeaker() {
   syncAllSpeakers();
-  speakers.push({
-    id: '', did: '', model: '', modelName: '',
-    ttsCommand: [5,1], wakeUpCommand: [5,3], tts: 'xiaoai', streamResponse: false,
-    bot: { name: '', profile: '' },
-    room: { name: '', description: '' },
-    systemTemplate: '',
-  });
+  speakers.push({ id:'', did:'', model:'', modelName:'', ttsCommand:[5,1], wakeUpCommand:[5,3], tts:'xiaoai', streamResponse:false, bot:{name:'',profile:''}, master:{name:'',profile:''}, room:{name:'',description:''}, systemTemplate:'' });
   renderSpeakers();
-  // Scroll to new speaker
   const cards = qsa('.speaker-card');
-  if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (cards.length) cards[cards.length-1].scrollIntoView({ behavior:'smooth', block:'center' });
 }
 
 function removeSpeaker(index) {
@@ -1078,46 +1247,62 @@ function togglePwd(inputId, btn) {
   const input = $(inputId);
   const visible = input.type === 'text';
   input.type = visible ? 'password' : 'text';
-  btn.textContent = visible ? '🙈' : '👁';
+  btn.innerHTML = visible ? '&#x1f648;' : '&#x1f441;';
 }
 
 // ---- Save & Restart ----
-async function saveAndRestart() {
-  if (!currentAccountId) { showToast('请先选择账号'); return; }
+function buildSpeakerDefaults() {
+  const kwKeys = ['callAIKeywords','wakeUpKeywords','exitKeywords','switchSpeakerKeywords','onEnterAI','onExitAI','onAIAsking','onAIReplied','onAIError'];
+  const speakerDefaults = {};
+  for (const k of kwKeys) { speakerDefaults[k] = shared[k] || []; }
+  speakerDefaults.botName = globalRole.botName;
+  speakerDefaults.botProfile = globalRole.botProfile;
+  speakerDefaults.masterName = globalRole.masterName;
+  speakerDefaults.masterProfile = globalRole.masterProfile;
+  speakerDefaults.roomName = globalRole.roomName;
+  speakerDefaults.roomDescription = globalRole.roomDescription;
+  speakerDefaults.systemTemplate = globalRole.systemTemplate;
+  return speakerDefaults;
+}
+
+async function save() {
   collectShared();
   syncAllSpeakers();
 
-  // Apply global role to speakers that inherit
+  if (!currentAccountId && !shared.userId) { showToast('请先填写小米账号 userId'); return; }
+
+  const btn = $('save-btn');
+  btn.classList.add('loading');
+
   speakers = speakers.map(sp => {
-    if (!sp.bot?.name && !sp.bot?.profile && !sp.room?.name && !sp.room?.description && !sp.systemTemplate) {
-      return {
-        ...sp,
-        bot: { name: globalRole.botName, profile: globalRole.botProfile },
-        room: { name: globalRole.roomName, description: globalRole.roomDescription },
-        systemTemplate: globalRole.systemTemplate,
-      };
+    if (!sp.bot?.name && !sp.bot?.profile && !sp.master?.name && !sp.master?.profile && !sp.room?.name && !sp.room?.description && !sp.systemTemplate) {
+      return { ...sp, bot:{name:globalRole.botName,profile:globalRole.botProfile}, master:{name:globalRole.masterName,profile:globalRole.masterProfile}, room:{name:globalRole.roomName,description:globalRole.roomDescription}, systemTemplate:globalRole.systemTemplate };
     }
     return sp;
   });
 
-  // Build speakerDefaults
-  const speakerDefaults = {};
-  for (const k of ['callAIKeywords','wakeUpKeywords','exitKeywords','switchSpeakerKeywords','onEnterAI','onExitAI','onAIAsking','onAIReplied','onAIError']) {
-    if (shared[k]?.length) speakerDefaults[k] = shared[k];
+  const speakerDefaults = buildSpeakerDefaults();
+
+  if (!currentAccountId) {
+    try {
+      const r = await api('POST', '/api/accounts', {
+        userId: shared.userId, password: shared.password, passToken: shared.passToken, speakerDefaults,
+      });
+      if (!r.ok) { const d = await r.json(); btn.classList.remove('loading'); showToast(d.error || '创建账号失败'); return; }
+      const account = await r.json();
+      currentAccountId = account.id;
+      const accR = await api('GET', '/api/accounts');
+      if (accR.ok) { accounts = await accR.json(); renderAccountTabs(); }
+    } catch (_) { btn.classList.remove('loading'); showToast('连接失败'); return; }
+  } else {
+    try {
+      const r = await api('PUT', `/api/accounts/${currentAccountId}`, {
+        userId: shared.userId, password: shared.password, passToken: shared.passToken, speakerDefaults,
+      });
+      if (!r.ok) { const d = await r.json(); btn.classList.remove('loading'); showToast(d.error || '更新账号失败'); return; }
+    } catch (_) { btn.classList.remove('loading'); showToast('连接失败'); return; }
   }
 
-  // Update account
-  try {
-    let r = await api('PUT', `/api/accounts/${currentAccountId}`, {
-      userId: shared.userId,
-      password: shared.password,
-      passToken: shared.passToken,
-      speakerDefaults,
-    });
-    if (!r.ok) { const d = await r.json(); showToast(d.error || '更新账号失败'); return; }
-  } catch (_) { showToast('连接失败'); return; }
-
-  // Save speakers
   let existingSpeakers = [];
   try {
     const r = await api('GET', `/api/accounts/${currentAccountId}/speakers`);
@@ -1130,18 +1315,13 @@ async function saveAndRestart() {
 
   for (const sp of speakers) {
     const speakerData = {
-      did: sp.did,
-      model: sp.model,
-      modelName: sp.modelName,
+      did: sp.did, model: sp.model, modelName: sp.modelName,
       config: {
-        ttsCommand: sp.ttsCommand,
-        wakeUpCommand: sp.wakeUpCommand,
-        tts: sp.tts,
-        streamResponse: sp.streamResponse,
-        botName: sp.bot?.name || '',
-        botProfile: sp.bot?.profile || '',
-        roomName: sp.room?.name || '',
-        roomDescription: sp.room?.description || '',
+        ttsCommand: sp.ttsCommand, wakeUpCommand: sp.wakeUpCommand,
+        tts: sp.tts, streamResponse: sp.streamResponse,
+        botName: sp.bot?.name || '', botProfile: sp.bot?.profile || '',
+        masterName: sp.master?.name || '', masterProfile: sp.master?.profile || '',
+        roomName: sp.room?.name || '', roomDescription: sp.room?.description || '',
         systemTemplate: sp.systemTemplate || '',
       },
     };
@@ -1151,54 +1331,109 @@ async function saveAndRestart() {
       await api('PUT', `/api/accounts/${currentAccountId}/speakers/${sp.id}`, speakerData);
     } else {
       const r = await api('POST', `/api/accounts/${currentAccountId}/speakers`, speakerData);
-      if (r.ok) {
-        const created = await r.json();
-        updatedIds.add(created.id);
-      }
+      if (r.ok) { const created = await r.json(); updatedIds.add(created.id); }
     }
   }
 
-  // Delete removed speakers
   for (const es of existingSpeakers) {
     if (!updatedIds.has(es.id)) {
       await api('DELETE', `/api/accounts/${currentAccountId}/speakers/${es.id}`);
     }
   }
 
-  // Restart
+  clearDirty();
+  btn.classList.remove('loading');
+  showToast('已保存');
+}
+
+async function restart() {
+  if (!currentAccountId) { showToast('请先保存后再重启'); return; }
+  const btn = $('restart-btn');
+  btn.classList.add('loading');
+  const accR = await api('GET', '/api/accounts');
+  if (accR.ok) { accounts = await accR.json(); renderAccountTabs(); }
+  await selectAccount(currentAccountId);
   try {
     const r = await api('POST', `/api/accounts/${currentAccountId}/restart`);
-    if (r.ok) {
-      showToast('已保存并重启');
-      setTimeout(() => loadAll(), 1500);
-    } else {
-      showToast('保存成功，重启失败');
-    }
-  } catch (_) { showToast('保存成功，但连接失败'); }
+    btn.classList.remove('loading');
+    if (r.ok) { showToast('已重启'); await refreshStatus(); }
+    else showToast('重启失败');
+  } catch (_) { btn.classList.remove('loading'); showToast('重启失败，请检查服务状态'); }
 }
 
 // ---- Model Data ----
 const MODEL_DATA = {
-  'OH2P':  { name:'Xiaomi 智能音箱 Pro',          ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:true },
-  'OH2':   { name:'Xiaomi 智能音箱',               ttsCommand:[5,3], wakeUpCommand:[5,1], streamResponse:true },
-  'LX06':  { name:'小爱音箱 Pro',                   ttsCommand:[5,1], wakeUpCommand:[5,3], streamResponse:true },
-  'S12':   { name:'小米 AI 音箱',                   ttsCommand:[5,1], wakeUpCommand:[5,3], streamResponse:true },
-  'L15A':  { name:'小米 AI 音箱（第二代）',          ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:true },
-  'LX5A':  { name:'小爱音箱 万能遥控版',             ttsCommand:[5,1], wakeUpCommand:[5,3], streamResponse:true },
-  'LX05':  { name:'小爱音箱 Play（2019 款）',        ttsCommand:[5,1], wakeUpCommand:[5,3], streamResponse:true },
-  'X10A':  { name:'小爱智能家庭屏 10',              ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:true },
-  'L17A':  { name:'Xiaomi Sound Pro',              ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:true },
-  'L06A':  { name:'小爱音箱',                       ttsCommand:[5,1], wakeUpCommand:[5,2], streamResponse:false },
-  'LX01':  { name:'小爱音箱 mini',                  ttsCommand:[5,1], wakeUpCommand:[5,2], streamResponse:false },
-  'L05B':  { name:'小爱音箱 Play',                  ttsCommand:[5,3], wakeUpCommand:[5,1], streamResponse:false },
-  'L05C':  { name:'小米小爱音箱 Play 增强版',        ttsCommand:[5,3], wakeUpCommand:[5,1], streamResponse:false },
-  'L09A':  { name:'小爱音箱 Art',                   ttsCommand:[3,1], wakeUpCommand:[3,2], streamResponse:false },
-  'LX04':  { name:'小爱触屏音箱',                   ttsCommand:[5,1], wakeUpCommand:[5,2], streamResponse:false },
-  'ASX4B': { name:'Xiaomi 智能家庭屏 Mini',         ttsCommand:[5,3], wakeUpCommand:[5,1], streamResponse:false },
-  'X6A':   { name:'Xiaomi 智能家庭屏 6',            ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:false },
-  'X08E':  { name:'Redmi 小爱触屏音箱 Pro 8 英寸',   ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:false },
-  'X8F':   { name:'Xiaomi 智能家庭屏 Pro 8',        ttsCommand:[7,3], wakeUpCommand:[7,1], streamResponse:false },
+  'OH2P':{name:'Xiaomi 智能音箱 Pro',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:true},
+  'OH2':{name:'Xiaomi 智能音箱',ttsCommand:[5,3],wakeUpCommand:[5,1],streamResponse:true},
+  'LX06':{name:'小爱音箱 Pro',ttsCommand:[5,1],wakeUpCommand:[5,3],streamResponse:true},
+  'S12':{name:'小米 AI 音箱',ttsCommand:[5,1],wakeUpCommand:[5,3],streamResponse:true},
+  'L15A':{name:'小米 AI 音箱（第二代）',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:true},
+  'LX5A':{name:'小爱音箱 万能遥控版',ttsCommand:[5,1],wakeUpCommand:[5,3],streamResponse:true},
+  'LX05':{name:'小爱音箱 Play（2019 款）',ttsCommand:[5,1],wakeUpCommand:[5,3],streamResponse:true},
+  'X10A':{name:'小爱智能家庭屏 10',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:true},
+  'L17A':{name:'Xiaomi Sound Pro',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:true},
+  'L06A':{name:'小爱音箱',ttsCommand:[5,1],wakeUpCommand:[5,2],streamResponse:false},
+  'LX01':{name:'小爱音箱 mini',ttsCommand:[5,1],wakeUpCommand:[5,2],streamResponse:false},
+  'L05B':{name:'小爱音箱 Play',ttsCommand:[5,3],wakeUpCommand:[5,1],streamResponse:false},
+  'L05C':{name:'小米小爱音箱 Play 增强版',ttsCommand:[5,3],wakeUpCommand:[5,1],streamResponse:false},
+  'L09A':{name:'小爱音箱 Art',ttsCommand:[3,1],wakeUpCommand:[3,2],streamResponse:false},
+  'LX04':{name:'小爱触屏音箱',ttsCommand:[5,1],wakeUpCommand:[5,2],streamResponse:false},
+  'ASX4B':{name:'Xiaomi 智能家庭屏 Mini',ttsCommand:[5,3],wakeUpCommand:[5,1],streamResponse:false},
+  'X6A':{name:'Xiaomi 智能家庭屏 6',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:false},
+  'X08E':{name:'Redmi 小爱触屏音箱 Pro 8 英寸',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:false},
+  'X8F':{name:'Xiaomi 智能家庭屏 Pro 8',ttsCommand:[7,3],wakeUpCommand:[7,1],streamResponse:false},
 };
+
+// ---- Status refresh ----
+let accountStatuses = {};
+let statusTimer = 0;
+
+async function refreshStatus() {
+  if (!token) return;
+  try {
+    const r = await api('GET', '/api/accounts');
+    if (!r.ok) return;
+    accounts = await r.json();
+    // 获取每个账号的详细状态
+    for (const a of accounts) {
+      try {
+        const sr = await api('GET', `/api/accounts/${a.id}/status`);
+        if (sr.ok) accountStatuses[a.id] = await sr.json();
+      } catch (_) {}
+    }
+    renderAccountTabs();
+    updateSpeakerCardsStatus();
+  } catch (_) {}
+}
+
+function updateSpeakerCardsStatus() {
+  if (!currentAccountId) return;
+  const status = accountStatuses[currentAccountId];
+  const speakers = status?.speakers || [];
+  const cards = qsa('.speaker-card');
+  cards.forEach(card => {
+    const did = card.querySelector('[data-key="did"]')?.value;
+    const spStatus = speakers.find(s => s.did === did);
+    const dot = card.querySelector('.speaker-status-dot');
+    const seen = card.querySelector('.speaker-last-seen');
+    if (dot && spStatus) {
+      dot.className = 'speaker-status-dot ' + spStatus.status;
+      dot.title = spStatus.miServicesReady ? '已连接' : '未连接';
+    }
+    if (seen && spStatus && spStatus.lastAIResponseTime) {
+      const ago = Math.round((Date.now() - spStatus.lastAIResponseTime) / 1000);
+      seen.textContent = ago < 120 ? `最近响应: ${ago}秒前` : `最近响应: ${Math.round(ago/60)}分钟前`;
+    }
+  });
+}
+
+// ---- Unsaved changes ----
+let _dirty = false;
+function markDirty() { _dirty = true; }
+function clearDirty() { _dirty = false; }
+window.addEventListener('beforeunload', e => { if (_dirty) { e.preventDefault(); e.returnValue = ''; } });
+document.addEventListener('input', e => { if (e.target.closest('#view-main')) markDirty(); });
+document.addEventListener('change', e => { if (e.target.closest('#view-main')) markDirty(); });
 
 // ---- Init ----
 async function init() {
@@ -1210,19 +1445,17 @@ async function init() {
         $('user-label').textContent = data.username || '';
         showView('main');
         await loadAll();
+        if (statusTimer) clearInterval(statusTimer);
+        await refreshStatus();
+        statusTimer = setInterval(refreshStatus, 5000);
         checkConnection();
         setInterval(checkConnection, 8000);
-      } else {
-        doLogout();
-      }
+      } else { doLogout(); }
     } catch (_) { doLogout(); }
   } else {
     showView('login');
   }
-
-  $('login-pass').addEventListener('keydown', e => {
-    if (e.key === 'Enter') doLogin();
-  });
+  $('login-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 }
 init();
 </script>

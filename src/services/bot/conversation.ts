@@ -18,7 +18,7 @@ export class ConversationManager {
   private botConfig: BotConfigStore;
   constructor(config: DeepPartial<IBotConfig>, options?: { indexPath?: string; useDB?: boolean }) {
     this.config = config;
-    this.botConfig = new BotConfigStore(options?.indexPath, options?.useDB);
+    this.botConfig = new BotConfigStore(options?.indexPath, options?.useDB, config);
   }
 
   async init() {

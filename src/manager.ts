@@ -7,19 +7,24 @@ class MiGPTManager {
   private logger = Logger.create({ tag: "MiGPTManager" });
 
   async startAccount(accountId: string): Promise<void> {
-    if (this.instances.has(accountId)) {
-      await this.stopAccount(accountId);
+    try {
+      if (this.instances.has(accountId)) {
+        await this.stopAccount(accountId);
+      }
+      const config = await buildMiGPTConfig(accountId);
+      if (!config) {
+        this.logger.error(`Account ${accountId}: config not found`);
+        return;
+      }
+      const instance = new MiGPT(accountId, config);
+      this.instances.set(accountId, instance);
+      instance.start().catch((e) =>
+        this.logger.error(`Account ${accountId} start error`, e)
+      );
+    } catch (e) {
+      this.logger.error(`Account ${accountId} init failed, skipped`, e);
+      this.instances.delete(accountId);
     }
-    const config = await buildMiGPTConfig(accountId);
-    if (!config) {
-      this.logger.error(`Account ${accountId}: config not found`);
-      return;
-    }
-    const instance = new MiGPT(accountId, config);
-    this.instances.set(accountId, instance);
-    instance.start().catch((e) =>
-      this.logger.error(`Account ${accountId} start error`, e)
-    );
   }
 
   async stopAccount(accountId: string): Promise<void> {
@@ -41,9 +46,13 @@ class MiGPTManager {
     const { kPrisma } = await import("./services/db");
     const allAccounts = await kPrisma.xiaomiAccount.findMany();
     for (const account of allAccounts) {
-      await this.startAccount(account.id);
+      try {
+        await this.startAccount(account.id);
+      } catch (e) {
+        this.logger.error(`Account ${account.id} start failed, continuing`, e);
+      }
     }
-    this.logger.log(`Started ${allAccounts.length} account(s)`);
+    this.logger.log(`Started ${this.instances.size} account(s)`);
   }
 
   async stopAll(): Promise<void> {
@@ -54,6 +63,19 @@ class MiGPTManager {
 
   getStatus(accountId: string): "running" | "stopped" {
     return this.instances.has(accountId) ? "running" : "stopped";
+  }
+
+  getAccountStatus(accountId: string) {
+    const instance = this.instances.get(accountId);
+    return instance ? instance.getStatus() : { accountId, speakers: [] };
+  }
+
+  getAllStatus() {
+    const result: Record<string, any> = {};
+    for (const [accountId, instance] of this.instances) {
+      result[accountId] = instance.getStatus();
+    }
+    return result;
   }
 }
 

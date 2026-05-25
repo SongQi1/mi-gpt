@@ -64,7 +64,7 @@ export class ShortTermMemoryAgent {
       jsonMode: true,
       requestId: `update-short-memory-${memory?.id}`,
       user: buildPrompt(userTemplate, {
-        masterName: master.name,
+        masterName: master?.name || "用户",
         botName: bot.name,
         shortTermMemory: lastMemory?.text ?? "暂无短期记忆",
         messages: newMemories

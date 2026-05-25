@@ -65,9 +65,22 @@ export class Speaker extends BaseSpeaker {
   }
 
   status: "running" | "stopped" = "running";
+  lastAIResponseTime = 0;
 
   stop() {
     this.status = "stopped";
+  }
+
+  getStatus() {
+    return {
+      did: this.config.did,
+      name: this.MiNA?.account?.device?.name,
+      status: this.status,
+      miServicesReady: !!(this.MiNA && this.MiIOT),
+      keepAlive: this.keepAlive,
+      lastAIResponseTime: this.lastAIResponseTime,
+      streamResponse: this.streamResponse,
+    };
   }
 
   async run() {

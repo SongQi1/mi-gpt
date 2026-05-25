@@ -268,6 +268,9 @@ export class AISpeaker extends Speaker {
         break;
       }
     }
+    if (data.answer) {
+      this.lastAIResponseTime = Date.now();
+    }
   }
 }
 

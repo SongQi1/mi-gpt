@@ -72,6 +72,22 @@ class _UserCRUD {
         return undefined;
       });
   }
+
+  async create(
+    user: Partial<User> & {
+      name: string;
+      profile: string;
+    }
+  ) {
+    user.name = user.name.trim();
+    user.profile = user.profile.trim();
+    return kPrisma.user
+      .create({ data: user })
+      .catch((e) => {
+        kDBLogger.error("create user failed", user, e);
+        return undefined;
+      });
+  }
 }
 
 export const UserCRUD = new _UserCRUD();

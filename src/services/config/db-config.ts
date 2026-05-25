@@ -1,4 +1,4 @@
-import { kPrisma, k404 } from "../db";
+import { kPrisma } from "../db";
 import type { XiaomiAccount, Speaker, AuthToken } from "@prisma/client";
 import type { MiGPTConfig, MiGPTSpeakerConfig } from "../../index";
 
@@ -45,6 +45,23 @@ export async function registerWebUser(
 
 export async function loginWebUser(username: string) {
   return kPrisma.webUser.findUnique({ where: { username } });
+}
+
+export async function deleteWebUser(webUserId: string): Promise<boolean> {
+  const user = await kPrisma.webUser.findUnique({ where: { id: webUserId } });
+  if (!user) return false;
+  // 级联删除该用户的所有小米账号（及其音箱）
+  const accounts = await kPrisma.xiaomiAccount.findMany({
+    where: { webUserId },
+    select: { id: true },
+  });
+  for (const a of accounts) {
+    await kPrisma.speaker.deleteMany({ where: { accountId: a.id } });
+  }
+  await kPrisma.xiaomiAccount.deleteMany({ where: { webUserId } });
+  await kPrisma.authToken.deleteMany({ where: { webUserId } });
+  await kPrisma.webUser.delete({ where: { id: webUserId } });
+  return true;
 }
 
 // ---- XiaomiAccount CRUD ----
@@ -146,6 +163,9 @@ export async function createSpeaker(
 ): Promise<Speaker> {
   const seq = await nextSeq(accountId);
   const id = `${xiaomiUserId}-${seq}`;
+  const cfg = (data.config || {}) as Record<string, any>;
+  // 如果有角色配置，立即创建 User 记录和 botIndex
+  const botIndex = await initSpeakerBotIndex(id, cfg);
   return kPrisma.speaker.create({
     data: {
       id,
@@ -154,10 +174,43 @@ export async function createSpeaker(
       name: data.name || "",
       model: data.model || "",
       modelName: data.modelName || "",
-      config: JSON.stringify(data.config || {}),
+      config: JSON.stringify(cfg),
+      botIndex: JSON.stringify(botIndex),
       seq,
     },
   });
+}
+
+async function initSpeakerBotIndex(
+  _speakerId: string,
+  cfg: Record<string, any>
+): Promise<{ botId?: string; masterId?: string }> {
+  const botName = cfg.botName as string | undefined;
+  if (!botName) return {};
+  const { UserCRUD } = await import("../db/user");
+  const { RoomCRUD, getRoomID } = await import("../db/room");
+  const bot = await UserCRUD.create({
+    name: botName,
+    profile: (cfg.botProfile as string) || "",
+  });
+  if (!bot) return {};
+  const doCheck = [bot];
+  let masterId: string | undefined;
+  if (cfg.masterName) {
+    const master = await UserCRUD.create({
+      name: cfg.masterName as string,
+      profile: (cfg.masterProfile as string) || "",
+    });
+    if (master) {
+      masterId = master.id;
+      doCheck.push(master);
+    }
+  }
+  const roomId = getRoomID(doCheck);
+  const roomName = (cfg.roomName as string) || `${bot.name}的私聊`;
+  const roomDesc = (cfg.roomDescription as string) || roomName;
+  await RoomCRUD.addOrUpdate({ id: roomId, name: roomName, description: roomDesc });
+  return { botId: bot.id, ...(masterId ? { masterId } : {}) };
 }
 
 export async function updateSpeaker(
@@ -172,23 +225,51 @@ export async function updateSpeaker(
 ): Promise<Speaker | null> {
   const speaker = await kPrisma.speaker.findUnique({ where: { id } });
   if (!speaker) return null;
-  return kPrisma.speaker.update({
-    where: { id },
-    data: {
-      ...(data.did !== undefined ? { did: data.did } : {}),
-      ...(data.name !== undefined ? { name: data.name } : {}),
-      ...(data.model !== undefined ? { model: data.model } : {}),
-      ...(data.modelName !== undefined ? { modelName: data.modelName } : {}),
-      ...(data.config !== undefined
-        ? { config: JSON.stringify(data.config) }
-        : {}),
-    },
-  });
+  const cfg = (data.config || {}) as Record<string, any>;
+  const updateData: any = {
+    ...(data.did !== undefined ? { did: data.did } : {}),
+    ...(data.name !== undefined ? { name: data.name } : {}),
+    ...(data.model !== undefined ? { model: data.model } : {}),
+    ...(data.modelName !== undefined ? { modelName: data.modelName } : {}),
+    ...(data.config !== undefined
+      ? { config: JSON.stringify(data.config) }
+      : {}),
+  };
+  // 如果提供了角色配置，更新 User 记录和 botIndex
+  if (data.config !== undefined && cfg.botName) {
+    const botIndex = await initSpeakerBotIndex(id, cfg);
+    updateData.botIndex = JSON.stringify(botIndex);
+  }
+  return kPrisma.speaker.update({ where: { id }, data: updateData });
 }
 
 export async function deleteSpeaker(id: string): Promise<boolean> {
   const speaker = await kPrisma.speaker.findUnique({ where: { id } });
   if (!speaker) return false;
+
+  // 清理关联数据：botIndex 记录了 botId/masterId
+  const index = safeParse<{ botId?: string; masterId?: string }>(speaker.botIndex, {});
+  if (index.botId) {
+    const roomId = index.masterId
+      ? [index.botId, index.masterId].sort().join("_")
+      : index.botId;
+    const userIds = [index.botId, index.masterId].filter(Boolean) as string[];
+
+    try {
+      await kPrisma.$transaction([
+        kPrisma.longTermMemory.deleteMany({ where: { roomId } }),
+        kPrisma.shortTermMemory.deleteMany({ where: { roomId } }),
+        kPrisma.memory.deleteMany({ where: { roomId } }),
+        kPrisma.message.deleteMany({ where: { roomId } }),
+        kPrisma.room.deleteMany({ where: { id: roomId } }),
+        kPrisma.user.deleteMany({ where: { id: { in: userIds } } }),
+      ]);
+    } catch (e) {
+      // 清理失败不影响音箱删除（例如 botIndex 指向的 User 已被手动删除）
+      console.error("deleteSpeaker cleanup failed:", e);
+    }
+  }
+
   await kPrisma.speaker.delete({ where: { id } });
   return true;
 }
@@ -204,17 +285,17 @@ export async function getSpeakers(accountId: string): Promise<Speaker[]> {
 
 export async function getBotIndex(
   speakerId: string
-): Promise<{ botId: string; masterId: string } | null> {
+): Promise<{ botId: string; masterId?: string } | null> {
   const speaker = await kPrisma.speaker.findUnique({ where: { id: speakerId } });
   if (!speaker) return null;
   const index = safeParse<{ botId?: string; masterId?: string } | null>(speaker.botIndex, null);
-  if (!index || !index.botId || !index.masterId) return null;
-  return index as { botId: string; masterId: string };
+  if (!index || !index.botId) return null;
+  return { botId: index.botId, masterId: index.masterId };
 }
 
 export async function setBotIndex(
   speakerId: string,
-  index: { botId: string; masterId: string }
+  index: { botId: string; masterId?: string }
 ): Promise<void> {
   await kPrisma.speaker.update({
     where: { id: speakerId },
@@ -229,9 +310,10 @@ export async function buildMiGPTConfig(
 ): Promise<MiGPTConfig | null> {
   const account = await kPrisma.xiaomiAccount.findUnique({
     where: { id: accountId },
-    include: { speakers: { orderBy: { seq: "asc" } } },
+    include: { speakers: { orderBy: { seq: "asc" } }, webUser: { select: { username: true } } },
   });
   if (!account) return null;
+  const username = account.webUser?.username;
 
   const defaults = safeParse<any>(account.speakerDefaults, {});
 
@@ -252,7 +334,9 @@ export async function buildMiGPTConfig(
     "onAIReplied",
     "onAIError",
   ]) {
-    if (defaults[key]?.length) speaker[key] = defaults[key];
+    // Always set — absent keys become undefined, triggering AISpeaker's hardcoded defaults.
+    // Empty arrays ([]) suppress the default since [] is not undefined.
+    speaker[key] = defaults[key] ?? undefined;
   }
 
   // Build speakers array
@@ -271,6 +355,9 @@ export async function buildMiGPTConfig(
       bot: cfg.botName
         ? { name: cfg.botName, profile: cfg.botProfile || "" }
         : undefined,
+      master: cfg.masterName
+        ? { name: cfg.masterName, profile: cfg.masterProfile || "" }
+        : undefined,
       room: cfg.roomName
         ? { name: cfg.roomName, description: cfg.roomDescription || "" }
         : undefined,
@@ -278,24 +365,28 @@ export async function buildMiGPTConfig(
     } as unknown as MiGPTSpeakerConfig;
   });
 
-  const globalSpeaker = speakers[0] || ({} as MiGPTSpeakerConfig);
-
   return {
+    username,
     speaker,
     speakers: speakers.length > 0 ? speakers : undefined,
-    bot: globalSpeaker.bot,
-    master: globalSpeaker.master,
-    room: globalSpeaker.room,
-    systemTemplate: globalSpeaker.systemTemplate || undefined,
+    bot: defaults.botName
+      ? ({ name: defaults.botName, profile: defaults.botProfile || "" } as any)
+      : undefined,
+    master: defaults.masterName
+      ? ({ name: defaults.masterName, profile: defaults.masterProfile || "" } as any)
+      : undefined,
+    room: defaults.roomName
+      ? ({ name: defaults.roomName, description: defaults.roomDescription || "" } as any)
+      : undefined,
+    systemTemplate: defaults.systemTemplate || undefined,
   };
 }
 
 // ---- Migration from .migpt.js ----
 
 export async function migrateFromFile(webUserId: string): Promise<boolean> {
-  const { existsSync, readFileSync, renameSync } = await import("fs");
+  const { existsSync, renameSync } = await import("fs");
   const path = await import("path");
-  const { fileURLToPath } = await import("url");
 
   const configPath = path.join(process.cwd(), ".migpt.js");
 
@@ -321,6 +412,13 @@ export async function migrateFromFile(webUserId: string): Promise<boolean> {
         onAIAsking: sp.onAIAsking || [],
         onAIReplied: sp.onAIReplied || [],
         onAIError: sp.onAIError || [],
+        botName: config.bot?.name || "",
+        botProfile: config.bot?.profile || "",
+        masterName: config.master?.name || "",
+        masterProfile: config.master?.profile || "",
+        roomName: config.room?.name || "",
+        roomDescription: config.room?.description || "",
+        systemTemplate: config.systemTemplate || "",
       },
     });
 
@@ -339,6 +437,8 @@ export async function migrateFromFile(webUserId: string): Promise<boolean> {
           streamResponse: s.streamResponse ?? false,
           botName: s.bot?.name || config.bot?.name || "",
           botProfile: s.bot?.profile || config.bot?.profile || "",
+          masterName: s.master?.name || config.master?.name || "",
+          masterProfile: s.master?.profile || config.master?.profile || "",
           roomName: s.room?.name || "",
           roomDescription: s.room?.description || "",
           systemTemplate: s.systemTemplate || config.systemTemplate || "",

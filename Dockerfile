@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
 FROM base as release
 
 COPY app.js .
-COPY package.json .
+COPY assets/package.json .
 COPY --from=dist /app/dist ./dist
 COPY --from=dist /app/prisma ./prisma
 COPY --from=runtime /app/node_modules ./node_modules
