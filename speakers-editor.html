@@ -136,6 +136,7 @@
     display: flex; align-items: center; gap: 6px;
   }
   .field-label .hint { font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--text-faint); }
+  .field-hint { font-size: 11px; color: var(--text-faint); line-height: 1.5; margin-top: 2px; }
   .field input, .field textarea {
     font-family: var(--font); font-size: 14px; color: var(--text);
     background: var(--surface); border: 1px solid var(--border);
@@ -311,6 +312,8 @@
   .btn-danger:active { background: var(--red-dim); color: var(--red); }
   .btn-danger:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
   .btn-xs { padding: 8px 16px; font-size: 12px; min-height: 44px; border-radius: 14px; }
+  .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text-dim); border-radius: var(--radius); }
+  .btn-ghost:active { background: var(--surface2); color: var(--text); }
 
   /* ===== BOTTOM BAR ===== */
   .bottom-bar {
@@ -707,6 +710,10 @@ function showView(view) {
   $('view-login').style.display = view === 'login' ? '' : 'none';
   $('view-main').style.display = view === 'main' ? '' : 'none';
   $('bottom-bar').style.display = view === 'main' ? '' : 'none';
+  if (view === 'login') {
+    const btn = $('login-submit-btn');
+    if (btn) btn.classList.remove('loading');
+  }
 }
 
 // ---- Login ----
@@ -737,6 +744,7 @@ async function doLogin() {
     token = data.token;
     localStorage.setItem("mi_gpt_token", token);
     $('user-label').textContent = u;
+    btn.classList.remove('loading');
     showView('main');
     await loadAll();
     refreshStatus();
@@ -910,6 +918,9 @@ async function selectAccount(accountId) {
       master:{name:cfg.masterName||'',profile:cfg.masterProfile||''},
       room:{name:cfg.roomName||'',description:cfg.roomDescription||''},
       systemTemplate:cfg.systemTemplate||'',
+      exitKeepAliveAfter:cfg.exitKeepAliveAfter??30,
+      checkTTSStatusAfter:cfg.checkTTSStatusAfter??3,
+      checkInterval:cfg.checkInterval??1000,
     };
   });
   syncUI();
@@ -1161,6 +1172,26 @@ function buildSpeakerCard(sp, index) {
           </div>
         </div>
       </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+        <button class="btn btn-ghost btn-xs" type="button" onclick="event.stopPropagation();const el=this.nextElementSibling;const shown=el.style.display!=='none';el.style.display=shown?'none':'';this.textContent=shown?'⚙ 高级参数':'⚙ 高级参数 ▲';" style="font-size:12px;padding:4px 10px;">⚙ 高级参数</button>
+        <div class="advanced-params" data-speaker="${index}" style="display:none;margin-top:10px;">
+          <div class="field">
+            <label class="field-label">无响应退出时间（秒）</label>
+            <input type="number" data-speaker="${index}" data-key="exitKeepAliveAfter" value="${sp.exitKeepAliveAfter ?? 30}" min="5" max="120" step="1" style="width:100px;">
+            <div class="field-hint">连续对话时，无响应多久后自动退出唤醒模式。默认 30 秒，建议不要超过 1 分钟。</div>
+          </div>
+          <div class="field">
+            <label class="field-label">TTS 播放检测延迟（秒）</label>
+            <input type="number" data-speaker="${index}" data-key="checkTTSStatusAfter" value="${sp.checkTTSStatusAfter ?? 3}" min="1" max="30" step="1" style="width:100px;">
+            <div class="field-hint">下发 TTS 指令多长时间后开始检测设备播放状态。当小爱长文本回复被过早中断时，可尝试调大该值。默认 3 秒。</div>
+          </div>
+          <div class="field">
+            <label class="field-label">播放状态检测间隔（毫秒）</label>
+            <input type="number" data-speaker="${index}" data-key="checkInterval" value="${sp.checkInterval ?? 1000}" min="500" max="10000" step="100" style="width:100px;">
+            <div class="field-hint">播放状态检测间隔，最低 500 毫秒。调小此值可以降低小爱回复之间的停顿感，请酌情调节。默认 1000 毫秒。</div>
+          </div>
+        </div>
+      </div>
       <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);text-align:right;">
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();removeSpeaker(${index})">删除此音箱</button>
       </div>
@@ -1206,6 +1237,7 @@ function collectSpeaker(index) {
     if (el.tagName === 'SELECT') { val = el.value; }
     else if (key === 'streamResponse') { val = el.value === 'true'; }
     else if (key === 'ttsCommand' || key === 'wakeUpCommand') { val = el.value.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)); }
+    else if (key === 'exitKeepAliveAfter' || key === 'checkTTSStatusAfter' || key === 'checkInterval') { val = parseInt(el.value) || 0; }
     else { val = el.value; }
     if (key === 'botName') { sp.bot = { ...sp.bot, name: val }; }
     else if (key === 'botProfile') { sp.bot = { ...sp.bot, profile: val }; }
@@ -1231,7 +1263,7 @@ function syncAllSpeakers() { speakers = speakers.map((_,i) => collectSpeaker(i))
 
 function addSpeaker() {
   syncAllSpeakers();
-  speakers.push({ id:'', did:'', model:'', modelName:'', ttsCommand:[5,1], wakeUpCommand:[5,3], tts:'xiaoai', streamResponse:false, bot:{name:'',profile:''}, master:{name:'',profile:''}, room:{name:'',description:''}, systemTemplate:'' });
+  speakers.push({ id:'', did:'', model:'', modelName:'', ttsCommand:[5,1], wakeUpCommand:[5,3], tts:'xiaoai', streamResponse:false, exitKeepAliveAfter:30, checkTTSStatusAfter:3, checkInterval:1000, bot:{name:'',profile:''}, master:{name:'',profile:''}, room:{name:'',description:''}, systemTemplate:'' });
   renderSpeakers();
   const cards = qsa('.speaker-card');
   if (cards.length) cards[cards.length-1].scrollIntoView({ behavior:'smooth', block:'center' });
@@ -1323,6 +1355,9 @@ async function save() {
         masterName: sp.master?.name || '', masterProfile: sp.master?.profile || '',
         roomName: sp.room?.name || '', roomDescription: sp.room?.description || '',
         systemTemplate: sp.systemTemplate || '',
+        exitKeepAliveAfter: sp.exitKeepAliveAfter ?? 30,
+        checkTTSStatusAfter: sp.checkTTSStatusAfter ?? 3,
+        checkInterval: sp.checkInterval ?? 1000,
       },
     };
 

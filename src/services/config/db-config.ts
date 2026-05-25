@@ -50,13 +50,15 @@ export async function loginWebUser(username: string) {
 export async function deleteWebUser(webUserId: string): Promise<boolean> {
   const user = await kPrisma.webUser.findUnique({ where: { id: webUserId } });
   if (!user) return false;
-  // 级联删除该用户的所有小米账号（及其音箱）
+  // 级联删除该用户的所有小米账号（及其音箱、角色、房间、消息、记忆）
   const accounts = await kPrisma.xiaomiAccount.findMany({
     where: { webUserId },
-    select: { id: true },
+    include: { speakers: { select: { id: true } } },
   });
   for (const a of accounts) {
-    await kPrisma.speaker.deleteMany({ where: { accountId: a.id } });
+    for (const sp of a.speakers) {
+      await deleteSpeaker(sp.id);
+    }
   }
   await kPrisma.xiaomiAccount.deleteMany({ where: { webUserId } });
   await kPrisma.authToken.deleteMany({ where: { webUserId } });
@@ -133,8 +135,14 @@ export async function deleteAccount(
 ): Promise<boolean> {
   const account = await getAccount(id, webUserId);
   if (!account) return false;
-  // delete speakers first
-  await kPrisma.speaker.deleteMany({ where: { accountId: id } });
+  // delete speakers with full cascade (User, Room, Message, Memory, etc.)
+  const speakers = await kPrisma.speaker.findMany({
+    where: { accountId: id },
+    select: { id: true },
+  });
+  for (const sp of speakers) {
+    await deleteSpeaker(sp.id);
+  }
   await kPrisma.xiaomiAccount.delete({ where: { id } });
   return true;
 }
@@ -237,6 +245,31 @@ export async function updateSpeaker(
   };
   // 如果提供了角色配置，更新 User 记录和 botIndex
   if (data.config !== undefined && cfg.botName) {
+    // 清理旧的 botIndex 关联数据（User/Room），避免孤儿记录
+    const oldIndex = safeParse<{ botId?: string; masterId?: string }>(speaker.botIndex, {});
+    if (oldIndex.botId) {
+      const oldRoomId = oldIndex.masterId
+        ? [oldIndex.botId, oldIndex.masterId].sort().join("_")
+        : oldIndex.botId;
+      const oldUserIds = [oldIndex.botId, oldIndex.masterId].filter(Boolean) as string[];
+      // 仅当没有其他音箱引用同一 roomId 时才清理
+      const otherRefs = await kPrisma.speaker.findFirst({
+        where: { id: { not: id }, botIndex: speaker.botIndex },
+        select: { id: true },
+      });
+      if (!otherRefs) {
+        try {
+          await kPrisma.$transaction([
+            kPrisma.longTermMemory.deleteMany({ where: { roomId: oldRoomId } }),
+            kPrisma.shortTermMemory.deleteMany({ where: { roomId: oldRoomId } }),
+            kPrisma.memory.deleteMany({ where: { roomId: oldRoomId } }),
+            kPrisma.message.deleteMany({ where: { roomId: oldRoomId } }),
+            kPrisma.room.deleteMany({ where: { id: oldRoomId } }),
+            kPrisma.user.deleteMany({ where: { id: { in: oldUserIds } } }),
+          ]);
+        } catch { /* 清理失败不影响更新 */ }
+      }
+    }
     const botIndex = await initSpeakerBotIndex(id, cfg);
     updateData.botIndex = JSON.stringify(botIndex);
   }
@@ -338,6 +371,10 @@ export async function buildMiGPTConfig(
     // Empty arrays ([]) suppress the default since [] is not undefined.
     speaker[key] = defaults[key] ?? undefined;
   }
+  // Runtime params — account defaults (can be overridden per-speaker)
+  if (defaults.exitKeepAliveAfter !== undefined) speaker.exitKeepAliveAfter = defaults.exitKeepAliveAfter;
+  if (defaults.checkTTSStatusAfter !== undefined) speaker.checkTTSStatusAfter = defaults.checkTTSStatusAfter;
+  if (defaults.checkInterval !== undefined) speaker.checkInterval = defaults.checkInterval;
 
   // Build speakers array
   const speakers: MiGPTSpeakerConfig[] = account.speakers.map((sp) => {
@@ -352,6 +389,9 @@ export async function buildMiGPTConfig(
       wakeUpCommand: cfg.wakeUpCommand || [5, 3],
       tts: cfg.tts || "xiaoai",
       streamResponse: cfg.streamResponse ?? false,
+      exitKeepAliveAfter: cfg.exitKeepAliveAfter ?? undefined,
+      checkTTSStatusAfter: cfg.checkTTSStatusAfter ?? undefined,
+      checkInterval: cfg.checkInterval ?? undefined,
       bot: cfg.botName
         ? { name: cfg.botName, profile: cfg.botProfile || "" }
         : undefined,
@@ -419,6 +459,9 @@ export async function migrateFromFile(webUserId: string): Promise<boolean> {
         roomName: config.room?.name || "",
         roomDescription: config.room?.description || "",
         systemTemplate: config.systemTemplate || "",
+        exitKeepAliveAfter: sp.exitKeepAliveAfter ?? 30,
+        checkTTSStatusAfter: sp.checkTTSStatusAfter ?? 3,
+        checkInterval: sp.checkInterval ?? 1000,
       },
     });
 
@@ -442,6 +485,9 @@ export async function migrateFromFile(webUserId: string): Promise<boolean> {
           roomName: s.room?.name || "",
           roomDescription: s.room?.description || "",
           systemTemplate: s.systemTemplate || config.systemTemplate || "",
+          exitKeepAliveAfter: s.exitKeepAliveAfter ?? sp.exitKeepAliveAfter ?? 30,
+          checkTTSStatusAfter: s.checkTTSStatusAfter ?? sp.checkTTSStatusAfter ?? 3,
+          checkInterval: s.checkInterval ?? sp.checkInterval ?? 1000,
         },
       });
     }
