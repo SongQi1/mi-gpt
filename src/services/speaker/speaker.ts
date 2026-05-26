@@ -66,6 +66,7 @@ export class Speaker extends BaseSpeaker {
 
   status: "running" | "stopped" = "running";
   lastAIResponseTime = 0;
+  private _messageInFlight = false;
 
   stop() {
     this.status = "stopped";
@@ -89,19 +90,25 @@ export class Speaker extends BaseSpeaker {
       this.stop();
     }
     this.logger.success("服务已启动...");
-    this.activeKeepAliveMode();
+    this.activeKeepAliveMode().catch((e) =>
+      this.logger.error("activeKeepAliveMode crashed", e)
+    );
     const retry = fastRetry(this, "消息列表");
     while (this.status === "running") {
-      const nextMsg = await this.fetchNextMessage();
-      const isOk = retry.onResponse(this._lastConversation);
-      if (isOk === "break") {
-        process.exit(1); // 退出应用
-      }
-      if (nextMsg) {
-        this.responding = false;
-        this.logger.log("🔥 " + nextMsg.text);
-        // 异步处理消息，不阻塞正常消息拉取
-        this.onMessage(nextMsg);
+      if (!this._messageInFlight) {
+        const nextMsg = await this.fetchNextMessage();
+        const isOk = retry.onResponse(this._lastConversation);
+        if (isOk === "break") {
+          process.exit(1); // 退出应用
+        }
+        if (nextMsg) {
+          this.responding = false;
+          this._messageInFlight = true;
+          this.logger.log("🔥 " + nextMsg.text);
+          this.onMessage(nextMsg)
+            .catch((e) => this.logger.error("onMessage error", e))
+            .finally(() => { this._messageInFlight = false; });
+        }
       }
       await sleep(this.heartbeat);
     }
@@ -112,8 +119,8 @@ export class Speaker extends BaseSpeaker {
     while (this.status === "running") {
       if (this.keepAlive) {
         // 唤醒中
-        if (!this.responding) {
-          // 没有回复时，一直播放静音音频使小爱闭嘴
+        if (!this.responding && !this._messageInFlight) {
+          // 没有回复且没有正在处理的消息时，播放静音音频使小爱闭嘴
           if (this.audioSilent) {
             await this.MiNA?.play({ url: this.audioSilent });
           } else {

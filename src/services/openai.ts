@@ -126,6 +126,12 @@ class OpenAIClient {
     const systemMsg: ChatCompletionMessageParam[] = isNotEmpty(system)
       ? [{ role: "system", content: system! }]
       : [];
+    let signal: AbortSignal | undefined;
+    if (requestId) {
+      const controller = new AbortController();
+      this._abortCallbacks[requestId] = () => controller.abort();
+      signal = controller.signal;
+    }
     const stream = await this._client!.chat.completions.create({
       model,
       tools,
@@ -133,32 +139,36 @@ class OpenAIClient {
       messages: [...systemMsg, { role: "user", content: user }],
       response_format: jsonMode ? { type: "json_object" } : undefined,
       ...(enableSearch && { enable_search: true })
-    }).catch((e) => {
+    }, { signal }).catch((e) => {
       this._logger.error("LLM 响应异常", e);
       return null;
     });
     if (!stream) {
+      if (requestId) delete this._abortCallbacks[requestId];
       return;
     }
-    if (requestId) {
-      this._abortCallbacks[requestId] = () => stream.controller.abort();
-    }
     let content = "";
-    for await (const chunk of stream) {
-      const text = chunk.choices[0]?.delta?.content || "";
-      const aborted =
-        requestId && !Object.keys(this._abortCallbacks).includes(requestId);
-      if (aborted) {
-        content = "";
-        break;
+    try {
+      for await (const chunk of stream) {
+        const text = chunk.choices[0]?.delta?.content || "";
+        const aborted =
+          requestId && !Object.keys(this._abortCallbacks).includes(requestId);
+        if (aborted) {
+          content = "";
+          break;
+        }
+        if (text) {
+          onStream?.(text);
+          content += text;
+        }
       }
-      if (text) {
-        onStream?.(text);
-        content += text;
+    } catch (e) {
+      this._logger.error("Stream iteration error", e);
+      content = "";
+    } finally {
+      if (requestId) {
+        delete this._abortCallbacks[requestId];
       }
-    }
-    if (requestId) {
-      delete this._abortCallbacks[requestId];
     }
     if (trace && this.traceOutput) {
       this._logger.log(`✅ Answer: ${content ?? "None"}`.trim());

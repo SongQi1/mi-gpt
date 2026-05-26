@@ -16,6 +16,17 @@ const editorPath = join(__dirname, "speakers-editor.html");
 const logsPath = join(__dirname, "logs.html");
 const PORT = parseInt(process.env.CONFIG_PORT || "8408", 10);
 
+// ---- Global error handlers ----
+process.on("unhandledRejection", (reason) => {
+  console.error("UNHANDLED REJECTION:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION:", err);
+  if (err instanceof Error && (err.message.includes("EADDRINUSE") || err.message.includes("EACCES"))) {
+    process.exit(1);
+  }
+});
+
 // ---- Password hashing ----
 function hashPassword(password) {
   const salt = randomBytes(16).toString("hex");
@@ -47,14 +58,29 @@ function sendJSON(res, status, data) {
   res.end(JSON.stringify(data));
 }
 
-function parseBody(req) {
+function parseBody(req, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      req.destroy();
+      reject(new Error("Request body timeout"));
+    }, timeoutMs);
     let body = "";
-    req.on("data", (chunk) => (body += chunk));
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 1_000_000) {
+        clearTimeout(timer);
+        req.destroy();
+        reject(new Error("Request body too large"));
+      }
+    });
     req.on("end", () => {
+      clearTimeout(timer);
       try { resolve(JSON.parse(body)); } catch { resolve({}); }
     });
-    req.on("error", reject);
+    req.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
   });
 }
 
@@ -81,6 +107,7 @@ async function main() {
 
   // === HTTP 服务 ===
   const server = createServer(async (req, res) => {
+    try {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -381,6 +408,12 @@ async function main() {
     }
 
     sendJSON(res, 404, { error: "Not found" });
+    } catch (err) {
+      console.error("HTTP handler error:", err);
+      if (!res.headersSent) {
+        sendJSON(res, 500, { error: "Internal server error" });
+      }
+    }
   });
 
   server.listen(PORT, () => {

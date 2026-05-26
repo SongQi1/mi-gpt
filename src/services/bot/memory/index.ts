@@ -70,7 +70,9 @@ export class MemoryManager {
     }
     this._currentMemory = currentMemory;
     // 异步更新长短期记忆
-    this.updateLongShortTermMemory(ctx);
+    this.updateLongShortTermMemory(ctx).catch((e) =>
+      this._logger.error("updateLongShortTermMemory failed", e)
+    );
   }
 
   /**

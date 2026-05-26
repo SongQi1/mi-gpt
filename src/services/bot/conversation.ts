@@ -71,7 +71,7 @@ export class ConversationManager {
       });
       if (message) {
         // 异步加入记忆（到 room）
-        memory?.addMessage2Memory(ctx, message);
+        memory?.addMessage2Memory(ctx, message).catch(() => {});
         return message;
       }
     }

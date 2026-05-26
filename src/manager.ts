@@ -4,10 +4,18 @@ import { Logger } from "./utils/log";
 
 class MiGPTManager {
   private instances: Map<string, MiGPT> = new Map();
+  private _startLocks = new Map<string, Promise<void>>();
   private logger = Logger.create({ tag: "MiGPTManager" });
 
   async startAccount(accountId: string): Promise<void> {
+    // Serialize concurrent startAccount calls for the same accountId
+    const prevLock = this._startLocks.get(accountId) ?? Promise.resolve();
+    let releaseLock: () => void;
+    const newLock = new Promise<void>((r) => { releaseLock = r; });
+    this._startLocks.set(accountId, newLock);
+
     try {
+      await prevLock;
       if (this.instances.has(accountId)) {
         await this.stopAccount(accountId);
       }
@@ -24,6 +32,8 @@ class MiGPTManager {
     } catch (e) {
       this.logger.error(`Account ${accountId} init failed, skipped`, e);
       this.instances.delete(accountId);
+    } finally {
+      releaseLock!();
     }
   }
 
@@ -56,7 +66,7 @@ class MiGPTManager {
   }
 
   async stopAll(): Promise<void> {
-    for (const [accountId] of this.instances) {
+    for (const accountId of Array.from(this.instances.keys())) {
       await this.stopAccount(accountId);
     }
   }

@@ -16,7 +16,7 @@ export function runWithDB(main: () => Promise<void>) {
     .catch(async (e) => {
       kDBLogger.error(e);
       await kPrisma.$disconnect();
-      process.exit(1);
+      process.exitCode = 1;
     });
 }
 

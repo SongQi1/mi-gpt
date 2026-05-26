@@ -520,12 +520,19 @@ export class BaseSpeaker {
   private _currentSpeaker: string | undefined;
   async switchSpeaker(speaker: string) {
     if (!this._speakers && process.env.TTS_BASE_URL) {
-      const resp = await fetch(`${process.env.TTS_BASE_URL}/speakers`).catch(
-        () => null
-      );
-      const res = await resp?.json().catch(() => null);
-      if (Array.isArray(res)) {
-        this._speakers = res;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.config.timeout ?? 5000);
+      try {
+        const resp = await fetch(`${process.env.TTS_BASE_URL}/speakers`, {
+          signal: controller.signal,
+        }).catch(() => null);
+        clearTimeout(timer);
+        const res = await resp?.json().catch(() => null);
+        if (Array.isArray(res)) {
+          this._speakers = res;
+        }
+      } catch {
+        // timeout or network error — _speakers stays undefined
       }
     }
     if (!this._speakers) {

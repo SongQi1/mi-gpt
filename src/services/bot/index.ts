@@ -237,6 +237,10 @@ export class MyBot {
           stream.finish(answer);
           stream.cancel();
         }
+      })
+      .catch(() => {
+        stream.cancel();
+        options.onFinished?.("");
       });
     return stream;
   }
